@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A swipe-based fashion discovery PWA that delivers intelligent, personalized product recommendations from the first session. Users upload 2 outfit photos and complete 15 calibration swipes to receive a curated feed of fashion items matched to their style, powered by AI clustering and vector similarity. Revenue is generated through affiliate partnerships with fashion retailers.
+An AI-powered fashion discovery app that provides high-quality, personalized clothing recommendations from the first session. Users upload 2 outfit photos, complete 15 calibration swipes, and receive a continuously-learning feed of products matched to their style. Built as a Progressive Web App with affiliate revenue model, targeting English-speaking fashion consumers who want effortless style discovery without the work of traditional search.
 
 ## Core Value
 
-Deliver high-quality, personalized fashion recommendations from the very first session, making style discovery feel intelligent and effortless while driving measurable affiliate revenue.
+**Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.** The cluster-based cold-start system ensures even brand-new users see contextually appropriate items from their first interaction. If this doesn't work, nothing else matters.
 
 ## Requirements
 
@@ -16,73 +16,83 @@ Deliver high-quality, personalized fashion recommendations from the very first s
 
 ### Active
 
-- [ ] Cluster-based cold-start system using FashionSigLIP embeddings (200-500 style clusters)
-- [ ] Minimal onboarding: 2 outfit photo uploads + 15 swipes for calibration
-- [ ] Personalized feed ranking using multi-factor scoring (style 65%, cluster 15%, price 10%, freshness 10%)
-- [ ] Swipe interaction with 3 gestures: right (like), left (dislike), up (save)
-- [ ] Style Collections for saved items with user-created folders
-- [ ] Weighted user vector (positive centroid - 0.7 * negative centroid) with 14-day time decay
-- [ ] Price sensitivity profiling (min/max/median clicked/saved prices)
-- [ ] Perceptual hashing for product deduplication (Hamming distance threshold 5)
-- [ ] Affiliate tracking for click-through and revenue attribution
-- [ ] Decision logging for GDPR compliance and model validation
-- [ ] Partner store ingestion via WooCommerce API integration
-- [ ] User authentication with JWT
-- [ ] PWA with offline capabilities and home screen installation
+- [ ] **Cluster-based cold-start system**: Pre-cluster entire product catalog (200-500 style clusters using FashionSigLIP embeddings). New users instantly see products from their nearest clusters based on 2 uploaded photos.
+- [ ] **Minimal onboarding**: 2 outfit photos + 15 calibration swipes to personalized feed. Time-to-value under 3 minutes.
+- [ ] **Silent continuous learning**: System learns from every swipe, save, click, and view time without explicit user feedback requests. Weighted vector formula: `user_vector = 1.0 * positive_centroid - 0.7 * negative_centroid` with 14-day time decay.
+- [ ] **Multi-factor feed ranking**: Cosine similarity (65%), cluster prior (15%), price affinity (10%), freshness (10%) with mandatory diversity injection (3/20 items from adjacent clusters).
+- [ ] **Image quality gate**: Block blurry, too-small, or low-quality uploads that would pollute style vectors. Validate dimensions (400px min), file size (50KB-10MB), and blur detection via Laplacian variance.
+- [ ] **Price sensitivity profiling**: Track preferred min/max, median clicked price, median saved price. Nightly batch updates. Use in ranking to avoid showing unaffordable items.
+- [ ] **Perceptual hash deduplication**: Prevent same product from multiple stores appearing repeatedly. Hamming distance threshold of 5 for duplicate detection.
+- [ ] **Partner store ingestion**: WooCommerce API integration for product catalog. Bootstrap fallback store (300-500 curated products) to prevent Week 1 dependency block.
+- [ ] **Affiliate tracking**: End-to-end click tracking with commission attribution. Every product click must be trackable to measure business model viability.
+- [ ] **Style collections**: User-created folders for saved items ("Summer vacation," "Work outfits"). Increases engagement and emotional investment.
+- [ ] **Simple explainability**: 3 template-based explanations only (no category labeling): "Similar to your recent likes," "Matches your style," "Within your usual price range."
+- [ ] **Analytics from day one**: Full event taxonomy (feed views, swipes, clicks, onboarding steps) instrumented immediately. Track D7 retention, swipe-to-save ratio, affiliate CTR, onboarding completion.
+- [ ] **GDPR decision logs**: Every recommendation decision logged with similarity score, cluster ID, price score, timestamp for audit trail and debugging.
+- [ ] **PWA with offline capability**: Installable on iOS and Android home screens, works offline with cached content.
+- [ ] **English primary, translation-ready**: All UI copy in English with architecture supporting future translation addition.
 
 ### Out of Scope
 
-- **Search functionality** — Deceptively complex; requires comprehensive tagging, synonym handling, fuzzy matching. Better built after collecting user behavior data. Phase 2 feature.
-- **Face recognition** — Adds 30% complexity with zero core value. Creates GDPR Article 9 compliance burden, user trust issues, and technical complexity. Faces don't predict fashion preferences; outfit photos do.
-- **Native mobile apps** — PWA provides 90% of the value with 40-60% lower development cost. No app store delays, instant updates, single codebase.
-- **Social features** — No sharing, following, or social feed. Focus on personal discovery first; social can layer on top later.
-- **Advanced explainability** — Simple explanation tags only for MVP. Full "why this recommendation" system requires complex NLP and increases development time.
-- **Multiple payment methods** — Affiliate only for MVP. No direct payments, subscriptions, or premium tiers yet.
+- **Face recognition** — Legal complexity (GDPR Article 9 biometric data), user trust barriers, and zero contribution to fashion preference understanding. Face tells you nothing about style.
+- **Person detection (MVP)** — Adds 2-3 weeks of work. Users self-select relevant photos; FashionSigLIP handles full-frame clothing well enough for MVP. Add RT-DETR (Apache 2.0) in Phase 2 only if embedding quality degrades.
+- **Search functionality** — Requires comprehensive product tagging, synonym handling, spelling correction, and relevance ranking. 4-6 week project. Discovery via swipe is the MVP value prop. Add in Phase 2 with robust metadata.
+- **Native mobile apps** — Three codebases (iOS, Android, backend) vs. one PWA. App Store review delays block rapid iteration. No push notifications on iOS acceptable for MVP.
+- **Social features** — No sharing, following, public profiles, or social feed. Pure personal discovery tool.
+- **User-generated content** — Users cannot upload products or create public collections. Curated partner inventory only.
+- **Advanced filtering** — No manual price/category/style filters. Pure algorithmic feed. Filters imply search, which is out of scope.
+- **Collaborative filtering** — "Users like you also liked..." requires critical mass of users. Content-based only for MVP.
+- **Category-based explanations** — "Similar to your saved sneakers" requires product taxonomy that doesn't exist yet. Too complex for MVP.
 
 ## Context
 
-### Business Model
-Affiliate revenue from fashion retailer partnerships. Every product click is tracked with affiliate codes, earning commission on resulting purchases. This allows free user access while validating commercial viability.
+### Market Opportunity
+Fashion e-commerce users struggle with:
+- **Search requires knowing what you want** — Most users browse because they can't articulate their style preferences
+- **Traditional discovery is time-consuming** — Browsing stores manually takes hours
+- **Generic recommendations miss the mark** — "Popular items" don't match individual taste
 
-### User Journey
-1. User uploads 2 outfit photos (their style examples)
-2. System generates FashionSigLIP embeddings and maps to nearest style clusters
-3. User completes 15 calibration swipes to refine preferences
-4. Personal style vector is created (likes weighted positively, dislikes negatively)
-5. Feed shows ranked products: similar items from their clusters + personalized matches
-6. System learns continuously from all interactions (saves, swipes, clicks, time spent)
-7. Recommendations improve over time while adapting to style evolution (14-day decay)
+This creates an opening for AI-powered personal discovery that combines the ease of swiping with recommendation quality that feels intelligent from the first interaction.
 
 ### Technical Innovation
-The clustering-based cold-start solution solves the recommendation system's chicken-and-egg problem: you need user data for good recommendations, but users won't provide data if recommendations are bad. By pre-clustering all products into 200-500 style groups, even brand-new users immediately see contextually relevant items. After 10 swipes, personal learning takes over.
+The cluster-based cold-start approach solves the fundamental recommendation system chicken-and-egg problem without forcing users through lengthy questionnaires. By pre-computing style clusters and instantly matching users to relevant segments, we deliver perceived intelligence before any personal learning occurs. This is the core technical insight that enables the MVP timeline.
 
-### Initial Inventory
-Starting with one partner website that has extensive product catalog. Additional WooCommerce partners can be integrated as system scales.
+### Architecture Philosophy
+- **Synchronous inference for MVP**: No premature async complexity. Semaphore-limited (4 concurrent) CPU inference handles <200 users comfortably.
+- **Single source of truth per data type**: Product embeddings in Qdrant only (not duplicated in PostgreSQL). Prevents sync bugs and saves 40% storage cost.
+- **Add infrastructure in response to measurement**: ARQ task queue, GPU nodes, and auto-scaling deferred until metrics (p95 latency >500ms, concurrent users >200) justify the complexity.
 
-### Success Metrics
-- **D7 Retention**: Do users return within a week? Fashion isn't daily, but weekly return indicates value.
-- **Swipe-to-Save Conversion**: Healthy ratio is 10-15% (1 in 7-10 items saved). Below 5% indicates poor recommendation quality.
-- **Affiliate Click-Through Rate**: Measures commercial intent and validates whether recommendations drive actual purchasing behavior.
+### Open Source AI Models (License Safety)
+All models Apache 2.0 or MIT licensed. Explicit AGPL avoidance (YOLOv8 excluded) to eliminate copyleft risk for proprietary SaaS:
+- **Marqo-FashionSigLIP** (Apache 2.0): Style embeddings
+- **RT-DETR** (Apache 2.0): Person detection (Phase 2 if needed)
+- **SAM** (Apache 2.0): Segmentation (Phase 2)
 
 ## Constraints
 
-- **Tech Stack**: Fixed architecture using React 18 + Vite + MUI (frontend), FastAPI + PostgreSQL + Qdrant (backend), Docker + Cloudflare Tunnel (infrastructure). All specified in PROJECT_PLAN.md.
-- **Budget**: Cost-effective infrastructure required. Using synchronous ML inference for MVP (no expensive GPU clusters), Hetzner Object Storage (S3-compatible), self-hosted Qdrant. Add complexity only when measured problems arise (p95 latency > 500ms or concurrent users > 200).
-- **Open Source AI**: YOLOv8-nano (person detection), SAM (segmentation), Marqo-FashionSigLIP (style embeddings). No proprietary model dependencies.
-- **Monorepo**: pnpm workspaces with feature-based architecture. Strict layer separation in backend (router → service → repository).
+- **Timeline**: 6 weeks hard deadline to MVP launch with 50-100 user soft launch
+- **Team**: Solo developer — all architecture decisions optimized for single-person velocity
+- **Language**: English primary, with architecture supporting future translation addition (no Hebrew requirement for MVP)
+- **Infrastructure Budget**: Optimize for early-stage cost control. No Kubernetes, no GPU clusters, no enterprise services until growth justifies it.
+- **Legal Compliance**: GDPR-compliant from day one (decision logs, right to erasure, data retention policies)
+- **License Safety**: All AI models must be Apache 2.0, MIT, or similarly permissive. No AGPL or restrictive licenses that create SaaS legal risk.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Remove face recognition | Cuts 30% complexity, eliminates GDPR Article 9 burden, removes user trust barrier. Faces don't predict style preferences. | — Pending |
-| Cluster-based cold-start | Enables intelligent recommendations from first session. Pre-computed style clusters (200-500) provide immediate relevance before personal learning kicks in. | — Pending |
-| PWA over native apps | 40-60% lower dev cost, single codebase, no app store delays, instant updates. Acceptable tradeoffs for fashion discovery use case. | — Pending |
-| Synchronous ML inference | Simple architecture for MVP (<100 users). Add async/queue complexity only when p95 latency > 500ms or concurrent users > 200. | — Pending |
-| Weighted negative signals | User dislikes (β = 0.7) push recommendations away from rejected styles. More nuanced than likes-only approach. Prevents echo chambers. | — Pending |
-| 14-day time decay | Recent interactions weighted higher. Adapts to evolving style preferences while filtering daily mood swings. Balance between volatility (3 days) and staleness (90 days). | — Pending |
-| Products in Qdrant only | Embeddings stored in Qdrant, not duplicated in PostgreSQL. Simplifies sync, reduces costs. PostgreSQL only for user data and training logs. | — Pending |
-| Affiliate-first monetization | No direct payments for MVP. Validates business model without asking users to pay. Fashion apps traditionally expect free access. | — Pending |
+| Vite + React + MUI (not Next.js) | Fastest HMR, MUI provides production-ready components with accessibility, no SSR complexity needed for PWA | — Pending |
+| FastAPI backend (not Django/Flask) | Native async support, automatic OpenAPI docs, Pydantic validation, excellent ML ecosystem integration | — Pending |
+| Qdrant for vectors (not Pinecone) | Self-hosted option for cost control, excellent filtering capabilities, no vendor lock-in | — Pending |
+| Custom swipe component (not react-tinder-card) | Full control over gesture physics, no dependency on abandoned library, tailored UX | — Pending |
+| Remove face recognition entirely | Cuts 30% of complexity, eliminates GDPR Article 9 biometric data burden, provides zero value for fashion preference understanding | — Pending |
+| Cluster-based cold start | Enables immediate relevance without 50-swipe training. Differentiator from competitors using questionnaires or random exploration | — Pending |
+| 2 photos + 15 swipes onboarding | Balances learning data with friction. Under 3 minutes time-to-value vs. 5-8 minutes in original plan | — Pending |
+| Synchronous inference for MVP | Eliminates queue/worker complexity, <1s latency acceptable with semaphore limiting, easier debugging | — Pending |
+| Bootstrap store fallback | Prevents Week 1 partner dependency block. 300-500 curated products enable parallel development | — Pending |
+| Diversity injection mandatory | Prevents echo chamber effect. Force 3/20 items from adjacent clusters maintains discovery while preserving relevance | — Pending |
+| Analytics from day one | Not retrofittable. Need data immediately to debug cold start, validate ranking weights, identify drop-off points | — Pending |
+| Template-only explainability | Category-based explanations require taxonomy that doesn't exist. 3 simple templates ship in MVP, semantic explanations deferred to Phase 2 | — Pending |
 
 ---
 *Last updated: 2026-01-27 after initialization*
