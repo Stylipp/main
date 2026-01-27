@@ -3,10 +3,10 @@
   "depth": "comprehensive",
   "parallelization": {
     "enabled": false,
-    "plan_level": false,
+    "plan_level": true,
     "task_level": false,
-    "skip_checkpoints": false,
-    "max_concurrent_agents": 1,
+    "skip_checkpoints": true,
+    "max_concurrent_agents": 3,
     "min_plans_for_parallel": 2
   },
   "gates": {
