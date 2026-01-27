@@ -94,5 +94,86 @@ All models Apache 2.0 or MIT licensed. Explicit AGPL avoidance (YOLOv8 excluded)
 | Analytics from day one | Not retrofittable. Need data immediately to debug cold start, validate ranking weights, identify drop-off points | — Pending |
 | Template-only explainability | Category-based explanations require taxonomy that doesn't exist. 3 simple templates ship in MVP, semantic explanations deferred to Phase 2 | — Pending |
 
+## Technology Stack (MVP)
+
+### Frontend
+- React 18 + TypeScript (Vite)
+- MUI v5 for UI
+- Zustand for client state
+- TanStack Query for server state
+- React Router v6
+- Axios
+- React Hook Form + Zod
+- Custom swipe component (framer-motion)
+- vite-plugin-pwa
+
+### Backend
+- FastAPI (Python 3.12+)
+- SQLAlchemy 2.0 (async) + Alembic
+- Pydantic v2
+- PostgreSQL (pgvector installed; minimal MVP use)
+- Qdrant for product embeddings
+- Redis (cache only)
+- JWT auth (python-jose)
+- Hetzner Object Storage (S3-compatible)
+
+## Monorepo & Architecture
+
+### Monorepo Structure (pnpm workspaces)
+- `apps/web` (PWA)
+- `apps/backend` (FastAPI)
+- `packages/shared` (types/constants)
+- `infra` (docker compose, tunnel config)
+- `.github/workflows` (CI)
+
+### Backend Separation Rules
+- `router.py`: HTTP only
+- `service.py`: business logic only
+- `repository.py`: DB/Qdrant only
+- `schemas.py`: validation only
+- `utils.py`: pure functions only
+
+### Backend Feature Folder Convention
+- Each feature uses subfolders with files inside, e.g. `ai/router/router.py` (not `ai/router.py`)
+
+## Infrastructure & Ops
+
+- Docker + Docker Compose (dev + prod)
+- Traefik reverse proxy
+- Cloudflare Tunnel
+- GitHub Actions CI/CD
+- Husky + lint-staged
+
+## Analytics (From Day One)
+
+- Event taxonomy: feed views, swipes, clicks, onboarding steps
+- Store events in DB with session_id + user_id + timestamp + payload
+- Track D1/D7 retention, swipe-to-save ratio, affiliate CTR, onboarding completion
+
+## Execution Roadmap (6 Weeks)
+
+- Week 1: Product ingestion + embeddings + clustering
+- Week 2: Feed API + ranking logic
+- Week 3: Swipe UI + feedback pipeline
+- Week 4: Affiliate tracking end-to-end
+- Week 5: Dedup + caching + monitoring
+- Week 6: UX polish + soft launch (50-100 users)
+
+## Risks & Mitigations
+
+- Partner onboarding delays → bootstrap store fallback
+- Model quality variance → image quality gate, Phase 2 detection if needed
+- Tight testing window → prioritize critical path + load test before launch
+
+## MVP Launch Checklist (Minimum)
+
+- [ ] Bootstrap store populated (300+ products)
+- [ ] Image quality gate tested with edge cases
+- [ ] Analytics events flowing to DB
+- [ ] Diversity injection verified
+- [ ] Affiliate links track end-to-end
+- [ ] Decision logs captured for every recommendation
+- [ ] PWA installable on iOS and Android
+
 ---
 *Last updated: 2026-01-27 after initialization*
