@@ -17,6 +17,8 @@
 - `packages/schemas/stylipp_schemas/common.py` - BaseResponse, ErrorResponse, PaginatedResponse
 - `packages/schemas/stylipp_schemas/user.py` - User auth schemas
 - `apps/backend/pyproject.toml` - Backend dependencies (includes stylipp-schemas)
+- `apps/backend/package.json` - pnpm scripts for backend dev/lint/test
+- `apps/backend/.gitignore` - Python-specific ignores for backend
 - `apps/backend/src/main.py` - FastAPI app + /health endpoint
 - `apps/backend/src/core/config.py` - Environment configuration
 - `apps/backend/src/core/database.py` - SQLAlchemy async engine and session

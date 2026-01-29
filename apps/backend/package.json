@@ -1,0 +1,11 @@
+{
+  "name": "@stylipp/backend",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "lint": "python -m ruff check src",
+    "format": "python -m black src",
+    "test": "python -m pytest"
+  }
+}
