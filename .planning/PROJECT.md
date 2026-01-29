@@ -1,4 +1,4 @@
-# AI Personal Stylist
+# Stylipp
 
 ## What This Is
 
@@ -111,7 +111,7 @@ All models Apache 2.0 or MIT licensed. Explicit AGPL avoidance (YOLOv8 excluded)
 - FastAPI (Python 3.12+)
 - SQLAlchemy 2.0 (async) + Alembic
 - Pydantic v2
-- PostgreSQL (pgvector installed; minimal MVP use)
+- PostgreSQL
 - Qdrant for product embeddings
 - Redis (cache only)
 - JWT auth (python-jose)
@@ -120,11 +120,16 @@ All models Apache 2.0 or MIT licensed. Explicit AGPL avoidance (YOLOv8 excluded)
 ## Monorepo & Architecture
 
 ### Monorepo Structure (pnpm workspaces)
-- `apps/web` (PWA)
+- `apps/stylipp.com` (PWA)
 - `apps/backend` (FastAPI)
-- `packages/shared` (types/constants)
+- `packages/schemas` (Pydantic models - API contracts, source of truth)
 - `infra` (docker compose, tunnel config)
 - `.github/workflows` (CI)
+
+### Type Flow
+- `packages/schemas` → Pydantic models (single source of truth for API contracts)
+- `apps/backend` → imports from schemas, has separate SQLAlchemy models for DB
+- `apps/stylipp.com` → TypeScript types auto-generated from OpenAPI spec
 
 ### Backend Separation Rules
 - `router.py`: HTTP only
@@ -134,7 +139,8 @@ All models Apache 2.0 or MIT licensed. Explicit AGPL avoidance (YOLOv8 excluded)
 - `utils.py`: pure functions only
 
 ### Backend Feature Folder Convention
-- Each feature uses subfolders with files inside, e.g. `ai/router/router.py` (not `ai/router.py`)
+- Each feature lives under `apps/backend/src/features/<feature>/...` with subfolders, e.g. `apps/backend/src/features/ai/router/router.py` (not `ai/router.py`)
+- Shared backend core lives under `apps/backend/src/core/` (e.g., `config.py`, `database.py`, `dependencies.py`)
 
 ## Infrastructure & Ops
 

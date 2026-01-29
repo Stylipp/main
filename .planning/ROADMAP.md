@@ -1,4 +1,4 @@
-# Roadmap: AI Personal Stylist
+# Roadmap: Stylipp
 
 ## Overview
 
@@ -16,7 +16,7 @@ None
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Infrastructure** - Monorepo setup, Docker, databases, auth, backend structure
+- [ ] **Phase 1: Foundation & Infrastructure** - Monorepo setup, Docker, databases, auth, backend structure, CI/CD + git hooks, Traefik + Cloudflare Tunnel baseline, object storage config, i18n scaffolding
 - [ ] **Phase 2: Product Ingestion & Embeddings** - Bootstrap store, WooCommerce API, FashionSigLIP, image quality gate
 - [ ] **Phase 3: Clustering & Cold Start System** - Pre-cluster catalog, cluster priors, nearest cluster matching
 - [ ] **Phase 4: User Onboarding & Profiles** - Photo upload (2), calibration swipes (15), user profiles, price profiling
@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 9: Affiliate Tracking** - End-to-end click tracking, commission attribution, partner management
 - [ ] **Phase 10: Deduplication & Data Quality** - Perceptual hashing, Hamming distance, duplicate prevention
 - [ ] **Phase 11: Analytics & Decision Logs** - Event taxonomy, GDPR logs, retention tracking, instrumentation
-- [ ] **Phase 12: Performance & Caching** - Redis caching, query optimization, latency monitoring
+- [ ] **Phase 12: Performance & Caching** - Redis caching, rate limiting, query optimization, latency monitoring
 - [ ] **Phase 13: PWA Implementation** - Service worker, offline capability, installability (iOS/Android)
 - [ ] **Phase 14: Polish & Quality Assurance** - Explainability templates, UX refinements, load testing, edge cases
 - [ ] **Phase 15: Launch Readiness** - Monitoring dashboards, alerts, launch checklist, soft launch prep
@@ -35,19 +35,27 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Foundation & Infrastructure
-**Goal**: Establish monorepo structure, Docker environment, database infrastructure (PostgreSQL, Qdrant, Redis), JWT authentication, and basic FastAPI backend with feature folder structure
+**Goal**: Establish monorepo structure, Docker environment, database infrastructure (PostgreSQL, Qdrant, Redis), JWT authentication, and basic FastAPI backend with feature folder convention (e.g., `src/features/ai/router/router.py`) and core layer (`src/core/*`), plus CI/CD + git hooks, Traefik + Cloudflare Tunnel baseline, object storage configuration, and i18n scaffolding (English primary, translation-ready)
 
 **Depends on**: Nothing (first phase)
 
 **Research**: Unlikely (established patterns with pnpm workspaces, Docker Compose, FastAPI async patterns)
 
-**Plans**: TBD
+**Plans**: Defined
 
 Plans:
-- TBD during planning
+- [ ] Initialize monorepo with `apps/web`, `apps/backend`, `packages/shared`, `infra`, `.github/workflows`
+- [ ] Set up pnpm workspaces and root scripts (dev/build/lint/test)
+- [ ] Add Docker Compose stack (Postgres, Qdrant, Redis) with Cloudflare → Traefik routing
+- [ ] Add backend skeleton with feature folder convention (`src/features/<feature>/router/router.py`, `service.py`, `repository.py`, `schemas.py`, `utils.py`)
+- [ ] Add backend core layer (`src/core/config.py`, `src/core/database.py`, `src/core/dependencies.py`)
+- [ ] Configure database layer (SQLAlchemy async + Alembic) and core settings
+- [ ] Implement JWT auth scaffold and storage scaffold
+- [ ] Set up CI/CD (GitHub Actions) + Husky/lint-staged
+- [ ] Add i18n scaffolding (English primary, translation-ready)
 
 ### Phase 2: Product Ingestion & Embeddings
-**Goal**: Build product ingestion pipeline with bootstrap store (300-500 curated products), WooCommerce API integration, FashionSigLIP embedding generation, and image quality gate validation
+**Goal**: Build product ingestion pipeline with bootstrap store (300-500 curated products), WooCommerce API integration, FashionSigLIP embedding generation, image quality gate validation, and Qdrant as the single source of truth for product embeddings
 
 **Depends on**: Phase 1
 
@@ -87,7 +95,7 @@ Plans:
 - TBD during planning
 
 ### Phase 5: Feed Generation & Ranking
-**Goal**: Build multi-factor feed ranking system (cosine similarity 65%, cluster prior 15%, price affinity 10%, freshness 10%) with mandatory diversity injection (3/20 items from adjacent clusters)
+**Goal**: Build multi-factor feed ranking system (cosine similarity 65%, cluster prior 15%, price affinity 10%, freshness 10%) with mandatory diversity injection (3/20 items from adjacent clusters) and synchronous inference with semaphore limiting (ARQ disabled in MVP)
 
 **Depends on**: Phase 4
 
@@ -113,7 +121,7 @@ Plans:
 - TBD during planning
 
 ### Phase 7: Learning & Personalization
-**Goal**: Implement continuous learning pipeline with user vector updates using weighted centroid formula (1.0 * positive_centroid - 0.7 * negative_centroid), 14-day exponential time decay, and price affinity profiling
+**Goal**: Implement continuous learning pipeline with user vector updates using weighted centroid formula (1.0 * positive_centroid - 0.7 * negative_centroid), 14-day exponential time decay, and price affinity profiling with nightly batch updates
 
 **Depends on**: Phase 6
 
@@ -167,7 +175,7 @@ Plans:
 - TBD during planning
 
 ### Phase 11: Analytics & Decision Logs
-**Goal**: Instrument complete event taxonomy (feed views, swipes, clicks, onboarding steps) with GDPR-compliant decision logs capturing similarity scores, cluster IDs, and timestamps for every recommendation
+**Goal**: Instrument complete event taxonomy (feed views, swipes, clicks, onboarding steps) with GDPR-compliant decision logs capturing similarity scores, cluster IDs, price scores, and timestamps for every recommendation, plus data retention and right-to-erasure policies
 
 **Depends on**: Phase 10
 
@@ -179,7 +187,7 @@ Plans:
 - TBD during planning
 
 ### Phase 12: Performance & Caching
-**Goal**: Implement Redis caching strategy for feed generation, optimize database queries, and establish latency monitoring to maintain p95 response times <500ms
+**Goal**: Implement Redis caching strategy for feed generation, rate limiting, optimize database queries, and establish latency monitoring to maintain p95 response times <500ms
 
 **Depends on**: Phase 11
 
