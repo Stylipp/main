@@ -1,0 +1,2 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+ALTER DATABASE stylipp SET timezone TO 'UTC';
