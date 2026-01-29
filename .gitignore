@@ -9,3 +9,7 @@ build/
 coverage/
 .vscode/
 .idea/
+
+# JWT secrets
+secrets/
+apps/backend/secrets/

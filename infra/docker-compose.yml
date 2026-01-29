@@ -46,6 +46,12 @@ services:
       timeout: 3s
       retries: 5
 
+  # backend service will be added in a later phase
+  # When added, include this volume mount for JWT keys:
+  #   backend:
+  #     volumes:
+  #       - ../secrets/jwt:/app/secrets/jwt:ro
+
 volumes:
   postgres_data:
   qdrant_data:
