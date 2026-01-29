@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
+from src.features.auth.router.router import router as auth_router
 
 settings = get_settings()
 
@@ -21,4 +22,5 @@ async def health_check() -> dict[str, str]:
     return {"status": "healthy"}
 
 
-# Feature routers will be included here as features are added.
+# Feature routers
+app.include_router(auth_router, prefix="/api")
