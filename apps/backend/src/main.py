@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
 from src.features.auth.router.router import router as auth_router
+from src.features.storage.router.router import router as storage_router
 
 settings = get_settings()
 
@@ -24,3 +25,4 @@ async def health_check() -> dict[str, str]:
 
 # Feature routers
 app.include_router(auth_router, prefix="/api")
+app.include_router(storage_router, prefix="/api")
