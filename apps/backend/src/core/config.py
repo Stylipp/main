@@ -12,6 +12,13 @@ class Settings(BaseSettings):
         "https://stylipp.com",
     ]
 
+    # Hetzner Object Storage (S3-compatible)
+    s3_endpoint_url: str = "https://hel1.your-objectstorage.com"
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_bucket_name: str = "station11-bucket"
+    s3_region: str = "hel1"
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 
