@@ -10,6 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/stylipp-backend
+  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/stylipp-web
+
 jobs:
   frontend-lint:
     name: Frontend Lint & Type Check
@@ -60,3 +65,92 @@ jobs:
 
       - name: Black format check
         run: black --check src
+
+  build-backend:
+    name: Build & Push Backend Image
+    runs-on: ubuntu-latest
+    needs: [backend-lint]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+  build-web:
+    name: Build & Push Web Image
+    runs-on: ubuntu-latest
+    needs: [frontend-lint]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/stylipp.com/Dockerfile
+          push: true
+          tags: |
+            ${{ env.WEB_IMAGE }}:latest
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+          build-args: |
+            VITE_API_URL=https://api.stylipp.com
+
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-web]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Generate .env from GitHub Secrets
+            cat > infra/.env << 'ENVEOF'
+            DB_NAME=stylipp
+            DB_USER=stylipp
+            DB_PASSWORD=${{ secrets.POSTGRESS_PASSWORD }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            S3_ENDPOINT_URL=${{ secrets.S3_ENDPOINT_URL }}
+            S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
+            S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
+            S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+            GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }}
+            TAG=${{ github.sha }}
+            ENVIRONMENT=production
+            ENVEOF
+
+            # Pull new images and restart
+            docker compose -f infra/docker-compose.yml pull stylipp-backend stylipp-web
+            docker compose -f infra/docker-compose.yml up -d
+            docker image prune -f
