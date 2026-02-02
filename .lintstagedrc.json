@@ -1,0 +1,13 @@
+{
+  "apps/stylipp.com/**/*.{ts,tsx}": [
+    "eslint --fix",
+    "prettier --write"
+  ],
+  "apps/stylipp.com/**/*.{json,css,md}": [
+    "prettier --write"
+  ],
+  "apps/backend/src/**/*.py": [
+    "ruff check --fix",
+    "black"
+  ]
+}
