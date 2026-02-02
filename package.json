@@ -5,6 +5,10 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r --parallel build",
     "lint": "pnpm -r --parallel lint",
-    "test": "pnpm -r --parallel test"
+    "test": "pnpm -r --parallel test",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
