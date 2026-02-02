@@ -120,6 +120,7 @@ jobs:
           build-args: |
             VITE_API_URL=https://api.stylipp.com
 
+
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest

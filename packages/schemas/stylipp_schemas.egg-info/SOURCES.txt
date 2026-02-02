@@ -1,0 +1,9 @@
+pyproject.toml
+stylipp_schemas/__init__.py
+stylipp_schemas/common.py
+stylipp_schemas/user.py
+stylipp_schemas.egg-info/PKG-INFO
+stylipp_schemas.egg-info/SOURCES.txt
+stylipp_schemas.egg-info/dependency_links.txt
+stylipp_schemas.egg-info/requires.txt
+stylipp_schemas.egg-info/top_level.txt
