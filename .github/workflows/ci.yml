@@ -159,7 +159,7 @@ jobs:
             S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
             S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
             S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
-            GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }}
+            GITHUB_REPOSITORY_OWNER=stylipp
             TAG=${{ github.sha }}
             ENVIRONMENT=production
             ENVEOF
