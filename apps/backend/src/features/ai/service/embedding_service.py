@@ -5,7 +5,7 @@ async methods for generating embeddings from PIL images. A semaphore limits
 concurrent inference to prevent memory issues.
 
 Model details:
-    - Model: Marqo/marqo-fashionSigLIP
+    - Model: Marqo/marqo-fashionSigLIP (loaded via open_clip)
     - Output: 768-dimensional vectors, normalized for cosine similarity
     - License: Apache 2.0
 """
@@ -30,10 +30,10 @@ class EmbeddingService:
 
     Attributes:
         model: The loaded FashionSigLIP model.
-        processor: The model's image processor.
+        preprocess: The model's image preprocessing transform.
     """
 
-    MODEL_NAME = "Marqo/marqo-fashionSigLIP"
+    MODEL_NAME = "hf-hub:Marqo/marqo-fashionSigLIP"
     EMBEDDING_DIM = 768
 
     def __init__(self, max_concurrent: int = 4) -> None:
@@ -44,12 +44,12 @@ class EmbeddingService:
                             Defaults to 4 to balance throughput and memory usage.
         """
         self.model = None
-        self.processor = None
+        self.preprocess = None
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._loaded = False
 
     def load_model(self) -> None:
-        """Load the FashionSigLIP model and processor.
+        """Load the FashionSigLIP model via open_clip.
 
         This should be called once during application startup. On first run,
         it will download the model (~600MB) from Hugging Face.
@@ -57,18 +57,13 @@ class EmbeddingService:
         Raises:
             RuntimeError: If model loading fails.
         """
-        from transformers import AutoModel, AutoProcessor
+        import open_clip
 
         logger.info("Loading FashionSigLIP model: %s", self.MODEL_NAME)
 
         try:
-            self.model = AutoModel.from_pretrained(
-                self.MODEL_NAME,
-                trust_remote_code=True,
-            )
-            self.processor = AutoProcessor.from_pretrained(
-                self.MODEL_NAME,
-                trust_remote_code=True,
+            self.model, _, self.preprocess = open_clip.create_model_and_transforms(
+                self.MODEL_NAME
             )
             self.model.eval()
             self._loaded = True
@@ -136,13 +131,12 @@ class EmbeddingService:
             768-dimensional embedding as a list of floats.
         """
         import torch
+        import torch.nn.functional as F
 
         with torch.no_grad():
-            inputs = self.processor(images=[image], return_tensors="pt")
-            features = self.model.get_image_features(
-                inputs["pixel_values"],
-                normalize=True,
-            )
+            image_tensor = self.preprocess(image).unsqueeze(0)
+            features = self.model.encode_image(image_tensor)
+            features = F.normalize(features, p=2, dim=-1)
             return features[0].tolist()
 
     def _inference_batch(self, images: list[Image.Image]) -> list[list[float]]:
@@ -155,13 +149,12 @@ class EmbeddingService:
             List of 768-dimensional embeddings.
         """
         import torch
+        import torch.nn.functional as F
 
         with torch.no_grad():
-            inputs = self.processor(images=images, return_tensors="pt")
-            features = self.model.get_image_features(
-                inputs["pixel_values"],
-                normalize=True,
-            )
+            image_tensors = torch.stack([self.preprocess(img) for img in images])
+            features = self.model.encode_image(image_tensors)
+            features = F.normalize(features, p=2, dim=-1)
             return features.tolist()
 
     @property
