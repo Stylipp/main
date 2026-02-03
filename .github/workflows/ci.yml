@@ -164,6 +164,9 @@ jobs:
             ENVIRONMENT=production
             ENVEOF
 
+            # Login to GHCR
+            echo "${{ secrets.STYLIPP_GHCR_TOKEN }}" | docker login ghcr.io -u stylipp --password-stdin
+
             # Pull new images and restart
             docker compose -f infra/docker-compose.yml pull stylipp-backend stylipp-web
             docker compose -f infra/docker-compose.yml up -d
