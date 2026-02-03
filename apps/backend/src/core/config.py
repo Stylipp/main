@@ -12,6 +12,11 @@ class Settings(BaseSettings):
         "https://stylipp.com",
     ]
 
+    # Qdrant vector database
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+    qdrant_collection: str = "products"
+
     # Hetzner Object Storage (S3-compatible)
     s3_endpoint_url: str = "https://hel1.your-objectstorage.com"
     s3_access_key: str = ""

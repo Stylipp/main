@@ -18,7 +18,8 @@ dependencies = [
   "passlib[bcrypt]",
   "python-multipart",
   "aiofiles",
-  "aioboto3~=13.0"
+  "aioboto3~=13.0",
+  "qdrant-client~=1.7"
 ]
 
 [project.optional-dependencies]
