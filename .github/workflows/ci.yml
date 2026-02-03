@@ -12,8 +12,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/stylipp-backend
-  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/stylipp-web
+  BACKEND_IMAGE: ghcr.io/stylipp/stylipp-backend
+  WEB_IMAGE: ghcr.io/stylipp/stylipp-web
 
 jobs:
   frontend-lint:
