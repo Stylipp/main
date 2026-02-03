@@ -1,6 +1,6 @@
 {
   "apps/stylipp.com/**/*.{ts,tsx}": [
-    "eslint --fix",
+    "eslint --fix --config apps/stylipp.com/eslint.config.js",
     "prettier --write"
   ],
   "apps/stylipp.com/**/*.{json,css,md}": [
