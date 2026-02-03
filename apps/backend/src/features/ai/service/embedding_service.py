@@ -121,9 +121,7 @@ class EmbeddingService:
         for i in range(0, len(images), batch_size):
             batch = images[i : i + batch_size]
             async with self._semaphore:
-                batch_embeddings = await asyncio.to_thread(
-                    self._inference_batch, batch
-                )
+                batch_embeddings = await asyncio.to_thread(self._inference_batch, batch)
                 results.extend(batch_embeddings)
 
         return results

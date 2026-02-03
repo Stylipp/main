@@ -16,9 +16,7 @@ class EmbeddingRequest(BaseModel):
 class EmbeddingResponse(BaseModel):
     """Response schema containing the generated embedding."""
 
-    embedding: list[float] = Field(
-        ..., description="768-dimensional embedding vector"
-    )
+    embedding: list[float] = Field(..., description="768-dimensional embedding vector")
     dimension: int = Field(default=768, description="Embedding dimension")
 
 
