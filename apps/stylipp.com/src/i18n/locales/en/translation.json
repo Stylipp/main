@@ -1,0 +1,40 @@
+{
+  "app": {
+    "name": "Stylipp",
+    "tagline": "Your AI Personal Stylist"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "navigation": {
+    "home": "Home",
+    "feed": "Discover",
+    "collections": "Collections",
+    "profile": "Profile"
+  },
+  "auth": {
+    "login": "Log in",
+    "logout": "Log out",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password"
+  },
+  "onboarding": {
+    "title": "Let's find your style",
+    "upload_photos": "Upload 2 outfit photos",
+    "calibration_swipes": "Swipe on 15 items",
+    "almost_done": "Almost there!"
+  },
+  "errors": {
+    "not_found": "Page not found",
+    "unauthorized": "Please log in to continue",
+    "server_error": "Server error, please try again later"
+  }
+}
