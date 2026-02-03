@@ -16,7 +16,7 @@ None
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Infrastructure** - Monorepo setup, Docker, databases, auth, backend structure, CI/CD + git hooks, Traefik + Cloudflare Tunnel baseline, object storage config, i18n scaffolding
+- [x] **Phase 1: Foundation & Infrastructure** - Monorepo setup, Docker, databases, auth, backend structure, CI/CD + git hooks, Traefik + Cloudflare Tunnel baseline, object storage config, i18n scaffolding
 - [ ] **Phase 2: Product Ingestion & Embeddings** - Bootstrap store, WooCommerce API, FashionSigLIP, image quality gate
 - [ ] **Phase 3: Clustering & Cold Start System** - Pre-cluster catalog, cluster priors, nearest cluster matching
 - [ ] **Phase 4: User Onboarding & Profiles** - Photo upload (2), calibration swipes (15), user profiles, price profiling
@@ -243,7 +243,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Infrastructure | 8/9 | In progress | - |
+| 1. Foundation & Infrastructure | 9/9 | Complete | 2026-02-03 |
 | 2. Product Ingestion & Embeddings | 0/TBD | Not started | - |
 | 3. Clustering & Cold Start System | 0/TBD | Not started | - |
 | 4. User Onboarding & Profiles | 0/TBD | Not started | - |
