@@ -35,7 +35,7 @@ services:
       - "6333:6333"
       - "6334:6334"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:6333/healthz || exit 1"]
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/localhost/6333' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,7 +84,7 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
-      - CORS_ORIGINS=https://stylipp.com,https://www.stylipp.com
+      - CORS_ORIGINS=["https://stylipp.com","https://www.stylipp.com"]
       - COOKIE_DOMAIN=.stylipp.com
       - COOKIE_SECURE=true
       - COOKIE_SAMESITE=lax
@@ -121,7 +121,7 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.stylipp-web.rule=Host(`stylipp.com`) || Host(`www.stylipp.com`)"
+      - "traefik.http.routers.stylipp-web.rule=Host(`stylipp.com`)"
       - "traefik.http.routers.stylipp-web.entrypoints=web"
       - "traefik.http.routers.stylipp-web.middlewares=security-headers"
       - "traefik.http.services.stylipp-web.loadbalancer.server.port=80"
