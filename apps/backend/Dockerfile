@@ -7,16 +7,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy shared schemas package first (backend depends on it)
+# Copy shared schemas package first and install it
 COPY packages/schemas /tmp/schemas
+RUN pip install --no-cache-dir /tmp/schemas && rm -rf /tmp/schemas
 
-# Copy backend requirements
-COPY apps/backend/pyproject.toml ./
+# Copy backend pyproject.toml and create a modified version without local file reference
+COPY apps/backend/pyproject.toml ./pyproject.toml.orig
 
-# Install schemas package, then backend dependencies
-RUN pip install --no-cache-dir /tmp/schemas && \
-    pip install --no-cache-dir . && \
-    rm -rf /tmp/schemas
+# Remove the stylipp-schemas file reference (already installed above)
+RUN sed 's|"stylipp-schemas @ file:../../packages/schemas",||' pyproject.toml.orig > pyproject.toml
+
+# Install backend dependencies
+RUN pip install --no-cache-dir .
 
 # Copy backend source code
 COPY apps/backend/src ./src
