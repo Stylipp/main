@@ -17,8 +17,8 @@ COPY apps/backend/pyproject.toml ./pyproject.toml.orig
 # Remove the stylipp-schemas file reference (already installed above)
 RUN sed 's|"stylipp-schemas @ file:../../packages/schemas",||' pyproject.toml.orig > pyproject.toml
 
-# Install CPU-only PyTorch first (avoids ~3GB of CUDA dependencies)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+# Install CPU-only PyTorch + torchvision (avoids ~3GB of CUDA dependencies)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Install backend dependencies (torch already satisfied, won't re-download)
 RUN pip install --no-cache-dir .
