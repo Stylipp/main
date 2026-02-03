@@ -106,7 +106,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.stylipp-backend.rule=Host(`api.stylipp.com`)"
       - "traefik.http.routers.stylipp-backend.entrypoints=web"
-      - "traefik.http.routers.stylipp-backend.middlewares=security-headers,cors@file"
+      # - "traefik.http.routers.stylipp-backend.middlewares=security-headers"
       - "traefik.http.services.stylipp-backend.loadbalancer.server.port=8000"
       - "traefik.docker.network=web"
 
@@ -121,19 +121,11 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.stylipp-web.rule=Host(`stylipp.com`)"
+      - "traefik.http.routers.stylipp-web.rule=Host(`stylipp.com`) || Host(`www.stylipp.com`)"
       - "traefik.http.routers.stylipp-web.entrypoints=web"
-      - "traefik.http.routers.stylipp-web.middlewares=security-headers"
+      # - "traefik.http.routers.stylipp-web.middlewares=security-headers"
       - "traefik.http.services.stylipp-web.loadbalancer.server.port=80"
       - "traefik.docker.network=web"
-      # Security Headers Middleware Definition
-      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
-      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
-      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
-      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
-      - "traefik.http.middlewares.security-headers.headers.contentSecurityPolicy=frame-ancestors 'none'"
 
 ###################################################
 # Networks and Volumes
