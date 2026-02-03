@@ -646,6 +646,7 @@ Location: `apps/web/src/router.tsx`
 
 ## Phase 14: Responsive Design
 
+
 ### 14.1 Breakpoint Adaptations
 Using MUI breakpoints: `xs`, `sm`, `md`, `lg`, `xl`
 
