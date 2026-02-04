@@ -32,3 +32,28 @@ class EmbeddingHealthResponse(BaseModel):
     embedding_dimension: int = Field(
         default=768, description="Output embedding dimension"
     )
+
+
+class QualityCheckRequest(BaseModel):
+    """Request schema for image quality validation."""
+
+    image_url: str = Field(..., description="URL of image to validate")
+
+
+class QualityCheckResponse(BaseModel):
+    """Response schema containing image quality validation results."""
+
+    passed: bool
+    issues: list[str] = Field(default_factory=list)
+    blur_score: float | None = None
+    width: int | None = None
+    height: int | None = None
+    file_size_bytes: int | None = None
+    thresholds: dict = Field(
+        default_factory=lambda: {
+            "min_dimension": 400,
+            "blur_threshold": 100.0,
+            "min_file_size_kb": 50,
+            "max_file_size_mb": 10,
+        }
+    )

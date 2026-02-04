@@ -1,8 +1,9 @@
-"""AI feature router with embedding endpoints.
+"""AI feature router with embedding and quality check endpoints.
 
 Endpoints:
-    GET  /api/ai/health - Check model status
-    POST /api/ai/embed  - Generate embedding from image URL (testing only)
+    GET  /api/ai/health         - Check model status
+    POST /api/ai/embed          - Generate embedding from image URL (testing only)
+    POST /api/ai/quality-check  - Validate image quality before embedding
 """
 
 from __future__ import annotations
@@ -19,7 +20,10 @@ from src.features.ai.schemas import (
     EmbeddingHealthResponse,
     EmbeddingRequest,
     EmbeddingResponse,
+    QualityCheckRequest,
+    QualityCheckResponse,
 )
+from src.features.ai.service.quality_gate import QualityGateService
 
 if TYPE_CHECKING:
     from src.features.ai.service.embedding_service import EmbeddingService
@@ -136,4 +140,52 @@ async def embed_image(
     return EmbeddingResponse(
         embedding=embedding,
         dimension=len(embedding),
+    )
+
+
+# Stateless service — safe to instantiate at module level
+_quality_gate_service = QualityGateService()
+
+
+@router.post("/quality-check", response_model=QualityCheckResponse)
+async def quality_check(
+    payload: QualityCheckRequest,
+) -> QualityCheckResponse:
+    """Validate image quality before embedding generation.
+
+    Checks image dimensions, file size, and blur level against
+    configured thresholds. Use this to pre-validate images before
+    submitting them for embedding.
+
+    Args:
+        payload: Request containing the image URL to validate.
+
+    Returns:
+        Quality check results including pass/fail, issues, and scores.
+
+    Raises:
+        HTTPException: If the image cannot be fetched or parsed.
+    """
+    try:
+        result = await _quality_gate_service.validate_from_url(payload.image_url)
+    except httpx.HTTPError as e:
+        logger.warning("Failed to fetch image for quality check: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to fetch image: {e}",
+        ) from e
+    except Exception as e:
+        logger.warning("Failed to parse image for quality check: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid image format",
+        ) from e
+
+    return QualityCheckResponse(
+        passed=result.passed,
+        issues=[issue.value for issue in result.issues],
+        blur_score=result.blur_score,
+        width=result.width,
+        height=result.height,
+        file_size_bytes=result.file_size_bytes,
     )
