@@ -244,7 +244,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Infrastructure | 9/9 | Complete | 2026-02-03 |
-| 2. Product Ingestion & Embeddings | 2/TBD | In progress | - |
+| 2. Product Ingestion & Embeddings | 3/6 | In progress | - |
 | 3. Clustering & Cold Start System | 0/TBD | Not started | - |
 | 4. User Onboarding & Profiles | 0/TBD | Not started | - |
 | 5. Feed Generation & Ranking | 0/TBD | Not started | - |
