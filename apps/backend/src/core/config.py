@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     s3_bucket_name: str = "station11-bucket"
     s3_region: str = "hel1"
 
+    # WooCommerce partner store (optional - for future partner integration)
+    woo_store_url: str | None = None
+    woo_consumer_key: str | None = None
+    woo_consumer_secret: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 
