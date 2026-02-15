@@ -11,28 +11,28 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 ## Current Position
 
 Phase: 2 of 15 (Product Ingestion & Embeddings)
-Plan: 4 of 6 in current phase
+Plan: 5 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-15 — Completed 02-04-PLAN.md
+Last activity: 2026-02-15 — Completed 02-05-PLAN.md
 
-Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2: 4/6
+Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2: 5/6
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: ~11 min
-- Total execution time: ~2h 23m
+- Total execution time: ~2h 26m
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
-| 2 | 4/6 | ~48m | ~12m |
+| 2 | 5/6 | ~51m | ~10m |
 
 **Recent Trend:**
-- Last 5 plans: 01-09, 02-01, 02-02, 02-03, 02-04
+- Last 5 plans: 02-01, 02-02, 02-03, 02-04, 02-05
 - Trend: Steady
 
 ## Accumulated Context
@@ -53,6 +53,8 @@ Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2: 4
 | 02-01 | Async Qdrant client singleton | Connection reuse across requests |
 | 02-03 | Module-level QualityGateService singleton | Stateless service, safe to reuse across requests |
 | 02-03 | opencv-python-headless over opencv-python | No GUI dependencies needed in backend |
+| 02-05 | Router prefix="/products" with /api in main.py | Matches existing auth, ai, storage router convention |
+| 02-05 | IngestionResult.quality_issues uses default_factory=list | Cleaner API, avoids None checks |
 
 ### Deferred Issues
 
@@ -70,5 +72,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 02-04-PLAN.md (WooCommerce API Client)
+Stopped at: Completed 02-05-PLAN.md (Ingestion Pipeline)
 Resume file: None
