@@ -10,6 +10,7 @@ from src.core.config import get_settings
 from src.features.ai.router.router import router as ai_router
 from src.features.ai.service.embedding_service import EmbeddingService
 from src.features.auth.router.router import router as auth_router
+from src.features.products.router.router import router as products_router
 from src.features.storage.router.router import router as storage_router
 
 logger = logging.getLogger(__name__)
@@ -74,3 +75,4 @@ async def health_check() -> dict[str, str]:
 app.include_router(auth_router, prefix="/api")
 app.include_router(storage_router, prefix="/api")
 app.include_router(ai_router, prefix="/api")
+app.include_router(products_router, prefix="/api")
