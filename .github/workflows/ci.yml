@@ -159,6 +159,9 @@ jobs:
             S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
             S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
             S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+            WOO_STORE_URL=${{ secrets.WOO_STORE_URL }}
+            WOO_CONSUMER_KEY=${{ secrets.WOO_CONSUMER_KEY }}
+            WOO_CONSUMER_SECRET=${{ secrets.WOO_CONSUMER_SECRET }}
             GITHUB_REPOSITORY_OWNER=stylipp
             TAG=latest
             ENVIRONMENT=production
