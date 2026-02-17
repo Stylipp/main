@@ -5,6 +5,9 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libgl1 \
+    libglib2.0-0 \
+    libxcb1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy shared schemas package first and install it
@@ -27,6 +30,8 @@ RUN pip install --no-cache-dir .
 COPY apps/backend/src ./src
 COPY apps/backend/alembic ./alembic
 COPY apps/backend/alembic.ini ./
+COPY apps/backend/scripts ./scripts
+COPY apps/backend/data ./data
 COPY apps/backend/entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
