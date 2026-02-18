@@ -6,33 +6,33 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 2 — Product Ingestion & Embeddings
+**Current focus:** Phase 2 complete — Ready for Phase 3 (Clustering & Cold Start)
 
 ## Current Position
 
 Phase: 2 of 15 (Product Ingestion & Embeddings)
-Plan: 5 of 6 in current phase
-Status: In progress
-Last activity: 2026-02-15 — Completed 02-05-PLAN.md
+Plan: 6 of 6 in current phase
+Status: Phase complete
+Last activity: 2026-02-18 — Completed 02-06-PLAN.md
 
-Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2: 5/6
+Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 ✓
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: ~11 min
-- Total execution time: ~2h 26m
+- Total execution time: ~2h 41m
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
-| 2 | 5/6 | ~51m | ~10m |
+| 2 | 6/6 ✓ | ~1h 6m | ~11m |
 
 **Recent Trend:**
-- Last 5 plans: 02-01, 02-02, 02-03, 02-04, 02-05
+- Last 5 plans: 02-02, 02-03, 02-04, 02-05, 02-06
 - Trend: Steady
 
 ## Accumulated Context
@@ -55,6 +55,9 @@ Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2: 5
 | 02-03 | opencv-python-headless over opencv-python | No GUI dependencies needed in backend |
 | 02-05 | Router prefix="/products" with /api in main.py | Matches existing auth, ai, storage router convention |
 | 02-05 | IngestionResult.quality_issues uses default_factory=list | Cleaner API, avoids None checks |
+| 02-06 | Real WooCommerce store instead of Unsplash placeholders | Realistic product data for development |
+| 02-06 | Auto-seed in entrypoint.sh with product count check | Idempotent seeding on container start |
+| 02-06 | Alembic migration for users + products tables | Was missing from Phase 1, required for seeding |
 
 ### Deferred Issues
 
@@ -67,10 +70,11 @@ None yet.
 ### Blockers/Concerns
 
 - ~~uuid-ossp extension not yet created~~ — Resolved in 02-01 migration
-- Docker PostgreSQL connection from Windows requires manual verification
+- ~~Docker PostgreSQL connection from Windows requires manual verification~~ — Verified working in 02-06
+- Qdrant client version mismatch (1.16.2 vs server 1.7.4) — functional but should pin compatible version
 
 ## Session Continuity
 
-Last session: 2026-02-15
-Stopped at: Completed 02-05-PLAN.md (Ingestion Pipeline)
+Last session: 2026-02-18
+Stopped at: Completed 02-06-PLAN.md (Bootstrap Store Seeding) — Phase 2 complete
 Resume file: None
