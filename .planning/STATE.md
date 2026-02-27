@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 2 complete — Ready for Phase 3 (Clustering & Cold Start)
+**Current focus:** Phase 3 in progress — Clustering & Cold Start System (1/3 plans complete)
 
 ## Current Position
 
-Phase: 2 of 15 (Product Ingestion & Embeddings)
-Plan: 6 of 6 in current phase
-Status: Phase complete
-Last activity: 2026-02-18 — Completed 02-06-PLAN.md
+Phase: 3 of 15 (Clustering & Cold Start System)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-27 — Completed 03-01-PLAN.md
 
-Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 ✓
+Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ◐
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: ~11 min
-- Total execution time: ~2h 41m
+- Total plans completed: 16
+- Average duration: ~10 min
+- Total execution time: ~2h 46m
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 �
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
+| 3 | 1/3 | 5m | 5m |
 
 **Recent Trend:**
-- Last 5 plans: 02-02, 02-03, 02-04, 02-05, 02-06
+- Last 5 plans: 02-03, 02-04, 02-05, 02-06, 03-01
 - Trend: Steady
 
 ## Accumulated Context
@@ -58,6 +59,10 @@ Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 �
 | 02-06 | Real WooCommerce store instead of Unsplash placeholders | Realistic product data for development |
 | 02-06 | Auto-seed in entrypoint.sh with product count check | Idempotent seeding on container start |
 | 02-06 | Alembic migration for users + products tables | Was missing from Phase 1, required for seeding |
+| 03-01 | Centroid vectors in Qdrant only (not duplicated in PG) | Follows Phase 2 pattern — Qdrant is source of truth for vectors |
+| 03-01 | Full replacement upsert for cluster rebuild | Delete all + insert new ensures rebuild consistency |
+| 03-01 | asyncio.to_thread for CPU-intensive sklearn ops | Prevents event loop blocking during K-means/silhouette |
+| 03-01 | Silhouette analysis for optimal k determination | Better cluster quality vs fixed k |
 
 ### Deferred Issues
 
@@ -75,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-18
-Stopped at: Completed 02-06-PLAN.md (Bootstrap Store Seeding) — Phase 2 complete
+Last session: 2026-02-27
+Stopped at: Completed 03-01-PLAN.md (Clustering Infrastructure & K-means Engine)
 Resume file: None
