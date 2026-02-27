@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 3 in progress — Clustering & Cold Start System (1/3 plans complete)
+**Current focus:** Phase 3 in progress — Clustering & Cold Start System (2/3 plans complete)
 
 ## Current Position
 
 Phase: 3 of 15 (Clustering & Cold Start System)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-27 — Completed 03-01-PLAN.md
+Last activity: 2026-02-27 — Completed 03-02-PLAN.md
 
 Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ◐
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 17
 - Average duration: ~10 min
-- Total execution time: ~2h 46m
+- Total execution time: ~2h 50m
 
 **By Phase:**
 
@@ -30,10 +30,10 @@ Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 �
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
-| 3 | 1/3 | 5m | 5m |
+| 3 | 2/3 | 9m | ~5m |
 
 **Recent Trend:**
-- Last 5 plans: 02-03, 02-04, 02-05, 02-06, 03-01
+- Last 5 plans: 02-04, 02-05, 02-06, 03-01, 03-02
 - Trend: Steady
 
 ## Accumulated Context
@@ -63,6 +63,9 @@ Progress: ██████████░░░░░ Phase 1 ✓ | Phase 2 �
 | 03-01 | Full replacement upsert for cluster rebuild | Delete all + insert new ensures rebuild consistency |
 | 03-01 | asyncio.to_thread for CPU-intensive sklearn ops | Prevents event loop blocking during K-means/silhouette |
 | 03-01 | Silhouette analysis for optimal k determination | Better cluster quality vs fixed k |
+| 03-02 | Hardcoded 3/20 diversity injection (not configurable) | Per PROJECT.md, prevents echo chambers |
+| 03-02 | Proportional product allocation by similarity score | Higher-similarity clusters get more items |
+| 03-02 | Diversity clusters = 4th-5th ranked by similarity | Adjacent clusters, not random |
 
 ### Deferred Issues
 
@@ -81,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 03-01-PLAN.md (Clustering Infrastructure & K-means Engine)
+Stopped at: Completed 03-02-PLAN.md (Cold Start Service & Rebuild Script)
 Resume file: None
