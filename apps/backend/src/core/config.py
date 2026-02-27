@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     s3_bucket_name: str = "station11-bucket"
     s3_region: str = "hel1"
 
+    # Clustering
+    cluster_collection: str = "style_clusters"
+    min_clusters: int = 10
+    max_clusters: int = 200
+
     # WooCommerce partner store (optional - for future partner integration)
     woo_store_url: str | None = None
     woo_consumer_key: str | None = None

@@ -43,6 +43,31 @@ async def ensure_collection() -> None:
         )
 
 
+async def ensure_cluster_collection() -> None:
+    """Create the style_clusters collection if it doesn't exist.
+
+    Collection config:
+    - 768-dimensional vectors (cluster centroid embeddings)
+    - Cosine similarity for distance metric
+    - On-disk payload storage for large payloads
+    """
+    settings = get_settings()
+    client = await get_qdrant_client()
+
+    collections = await client.get_collections()
+    collection_names = [c.name for c in collections.collections]
+
+    if settings.cluster_collection not in collection_names:
+        await client.create_collection(
+            collection_name=settings.cluster_collection,
+            vectors_config=VectorParams(
+                size=768,  # FashionSigLIP embedding dimension
+                distance=Distance.COSINE,
+            ),
+            on_disk_payload=True,
+        )
+
+
 async def health_check() -> bool:
     """Verify Qdrant connection and collection existence."""
     try:
