@@ -66,6 +66,8 @@ Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 �
 | 03-02 | Hardcoded 3/20 diversity injection (not configurable) | Per PROJECT.md, prevents echo chambers |
 | 03-02 | Proportional product allocation by similarity score | Higher-similarity clusters get more items |
 | 03-02 | Diversity clusters = 4th-5th ranked by similarity | Adjacent clusters, not random |
+| 03-03 | No auto-clustering in lifespan (API/entrypoint only) | CPU-intensive, would block startup |
+| 03-03 | 768-dim embedding validation on cold-start endpoint | Clear error messages for invalid input |
 
 ### Deferred Issues
 
@@ -83,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 03-02-PLAN.md (Cold Start Service & Rebuild Script)
+Last session: 2026-03-01
+Stopped at: Completed 03-03-PLAN.md (Clustering API & Pipeline Integration) — Phase 3 complete
 Resume file: None

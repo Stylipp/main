@@ -26,6 +26,10 @@ services:
     image: qdrant/qdrant:v1.7.4
     container_name: stylipp_qdrant
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
