@@ -24,6 +24,30 @@ else
     echo "Found $PRODUCT_COUNT products, skipping seed."
 fi
 
+# Auto-cluster if no clusters exist
+CLUSTER_COUNT=$(python -c "
+import asyncio
+from src.core.qdrant import get_qdrant_client
+from src.core.config import get_settings
+async def count():
+    client = await get_qdrant_client()
+    settings = get_settings()
+    try:
+        info = await client.get_collection(settings.cluster_collection)
+        return info.points_count
+    except Exception:
+        return 0
+print(asyncio.run(count()))
+" 2>/dev/null || echo "0")
+
+if [ "$CLUSTER_COUNT" -eq "0" ] || [ "$CLUSTER_COUNT" = "0" ]; then
+    echo "No clusters found. Running initial clustering..."
+    python -m scripts.rebuild_clusters
+    echo "Initial clustering complete."
+else
+    echo "Found $CLUSTER_COUNT clusters. Skipping clustering."
+fi
+
 echo "Starting server..."
 exec python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 
