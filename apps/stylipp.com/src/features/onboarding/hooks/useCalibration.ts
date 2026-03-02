@@ -38,15 +38,22 @@ export function useCalibration(): UseCalibrationReturn {
   const fetchInitiated = useRef(false)
 
   const fetchItems = useCallback(async () => {
+    if (photoEmbeddings.length === 0) {
+      setError('No photo embeddings available. Please upload photos first.')
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await api.post<CalibrationItem[]>('/onboarding/calibration-items', {
-        embeddings: photoEmbeddings,
-      })
+      const response = await api.post<{ items: CalibrationItem[]; total: number }>(
+        '/onboarding/calibration-items',
+        { embeddings: photoEmbeddings }
+      )
 
-      const fetchedItems = response.data
+      const fetchedItems = response.data.items
       setItems(fetchedItems)
       setCalibrationItems(fetchedItems.map((item) => item.product_id))
     } catch (err) {
@@ -58,11 +65,11 @@ export function useCalibration(): UseCalibrationReturn {
   }, [photoEmbeddings, setCalibrationItems])
 
   useEffect(() => {
-    if (!fetchInitiated.current) {
+    if (!fetchInitiated.current && photoEmbeddings.length > 0) {
       fetchInitiated.current = true
       fetchItems()
     }
-  }, [fetchItems])
+  }, [fetchItems, photoEmbeddings.length])
 
   // Prefetch next image for smooth transitions
   useEffect(() => {

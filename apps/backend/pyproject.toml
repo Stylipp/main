@@ -16,10 +16,11 @@ dependencies = [
   "pydantic-settings",
   "python-jose[cryptography]",
   "passlib[bcrypt]",
+  "bcrypt<5",
   "python-multipart",
   "aiofiles",
   "aioboto3~=13.0",
-  "qdrant-client~=1.7",
+  "qdrant-client>=1.7,<1.13",
   # ML dependencies for FashionSigLIP embeddings
   "transformers>=4.40.0",
   "torch>=2.0.0",
