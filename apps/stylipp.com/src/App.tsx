@@ -3,21 +3,13 @@ import { LandingPage } from './features/landing/pages/LandingPage'
 import LoginPage from './features/auth/components/LoginPage'
 import RegisterPage from './features/auth/components/RegisterPage'
 import PrivateRoute from './shared/components/PrivateRoute'
+import OnboardingGate from './shared/components/OnboardingGate'
 import OnboardingLayout from './features/onboarding/components/OnboardingLayout'
 import PhotoUploadStep from './features/onboarding/components/PhotoUploadStep'
+import CalibrationStep from './features/onboarding/components/CalibrationStep'
+import ProfileStep from './features/onboarding/components/ProfileStep'
+import OnboardingComplete from './features/onboarding/components/OnboardingComplete'
 import NotFoundPage from './pages/NotFoundPage'
-
-function CalibrationStep() {
-  return <div>Calibration coming soon (Plan 04-05)</div>
-}
-
-function ProfileStep() {
-  return <div>Profile coming soon (Plan 04-05)</div>
-}
-
-function OnboardingComplete() {
-  return <div>Onboarding complete! (Plan 04-05)</div>
-}
 
 export default function App() {
   return (
@@ -28,7 +20,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected routes */}
+        {/* Auth required, onboarding NOT required */}
         <Route element={<PrivateRoute />}>
           <Route path="/onboarding" element={<OnboardingLayout />}>
             <Route index element={<Navigate to="photos" replace />} />
@@ -37,7 +29,13 @@ export default function App() {
             <Route path="profile" element={<ProfileStep />} />
             <Route path="complete" element={<OnboardingComplete />} />
           </Route>
-          <Route path="/feed" element={<div>Feed (Phase 5)</div>} />
+        </Route>
+
+        {/* Auth + onboarding required */}
+        <Route element={<PrivateRoute />}>
+          <Route element={<OnboardingGate />}>
+            <Route path="/feed" element={<div>Feed coming in Phase 5</div>} />
+          </Route>
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />
