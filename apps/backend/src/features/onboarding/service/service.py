@@ -14,19 +14,29 @@ from uuid import UUID, uuid4
 
 from fastapi import HTTPException, UploadFile, status
 from PIL import Image
+from qdrant_client import AsyncQdrantClient
+from qdrant_client.models import PointStruct
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import Settings
 from src.features.ai.service.embedding_service import EmbeddingService
 from src.features.ai.service.quality_gate import QualityGateService
 from src.features.clustering.service.cold_start_service import ColdStartService
 from src.features.onboarding.schemas.schemas import (
+    CalibrationCompleteRequest,
+    CalibrationCompleteResponse,
     CalibrationItem,
     CalibrationItemsResponse,
     PhotoUploadResponse,
 )
+from src.features.onboarding.service.user_vector import (
+    compute_user_vector,
+    initialize_price_profile,
+)
 from src.features.storage.service.service import S3StorageService
 from src.models.product import Product
+from src.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +60,15 @@ class OnboardingService:
         quality_gate: QualityGateService,
         storage_service: S3StorageService,
         cold_start_service: ColdStartService,
+        qdrant_client: AsyncQdrantClient,
+        settings: Settings,
     ) -> None:
         self._embedding_service = embedding_service
         self._quality_gate = quality_gate
         self._storage_service = storage_service
         self._cold_start_service = cold_start_service
+        self._qdrant = qdrant_client
+        self._settings = settings
 
     async def upload_and_embed_photo(
         self, file: UploadFile, user_id: UUID
@@ -215,4 +229,139 @@ class OnboardingService:
         return CalibrationItemsResponse(
             items=items,
             total=len(items),
+        )
+
+    async def complete_calibration(
+        self,
+        user_id: UUID,
+        request: CalibrationCompleteRequest,
+        session: AsyncSession,
+    ) -> CalibrationCompleteResponse:
+        """Complete calibration: compute user vector, price profile, store results.
+
+        Fetches liked/disliked product embeddings from Qdrant, computes the
+        user style vector via Modified Rocchio, initializes the price profile
+        from liked item prices, stores the user vector in Qdrant's
+        user_profiles collection, and updates the User record in PostgreSQL.
+
+        Args:
+            user_id: Authenticated user's ID.
+            request: Calibration completion request with photo embeddings
+                     and liked/disliked product IDs.
+            session: Async SQLAlchemy session.
+
+        Returns:
+            CalibrationCompleteResponse with success status and price profile.
+
+        Raises:
+            HTTPException: 422 if validation fails, 404 if user not found.
+        """
+        # Validate photo embeddings
+        for i, emb in enumerate(request.photo_embeddings):
+            if len(emb) != _EMBEDDING_DIM:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=(
+                        f"Photo embedding at index {i} has {len(emb)} dimensions, "
+                        f"expected {_EMBEDDING_DIM}."
+                    ),
+                )
+
+        # Fetch liked product embeddings from Qdrant
+        liked_points = await self._qdrant.retrieve(
+            collection_name=self._settings.qdrant_collection,
+            ids=request.liked_product_ids,
+            with_vectors=True,
+            with_payload=True,
+        )
+        if not liked_points:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="No liked product embeddings found in Qdrant.",
+            )
+
+        liked_embeddings = [
+            point.vector for point in liked_points if point.vector is not None
+        ]
+
+        # Fetch disliked product embeddings from Qdrant
+        disliked_embeddings: list[list[float]] = []
+        if request.disliked_product_ids:
+            disliked_points = await self._qdrant.retrieve(
+                collection_name=self._settings.qdrant_collection,
+                ids=request.disliked_product_ids,
+                with_vectors=True,
+                with_payload=False,
+            )
+            disliked_embeddings = [
+                point.vector for point in disliked_points if point.vector is not None
+            ]
+
+        # Compute user style vector via Modified Rocchio
+        user_vector = compute_user_vector(
+            photo_embeddings=request.photo_embeddings,
+            liked_embeddings=liked_embeddings,
+            disliked_embeddings=disliked_embeddings,
+        )
+
+        # Compute price profile from liked items' prices (from PostgreSQL)
+        liked_uuids = []
+        for pid in request.liked_product_ids:
+            try:
+                liked_uuids.append(UUID(pid))
+            except ValueError:
+                continue
+
+        stmt = select(Product.price).where(Product.id.in_(liked_uuids))
+        result = await session.execute(stmt)
+        liked_prices = [float(row[0]) for row in result.all()]
+
+        price_profile = initialize_price_profile(liked_prices)
+
+        # Store user vector in Qdrant user_profiles collection
+        await self._qdrant.upsert(
+            collection_name=self._settings.user_profiles_collection,
+            points=[
+                PointStruct(
+                    id=str(user_id),
+                    vector=user_vector,
+                    payload={
+                        "user_id": str(user_id),
+                        "photo_count": len(request.photo_embeddings),
+                        "liked_count": len(request.liked_product_ids),
+                        "disliked_count": len(request.disliked_product_ids),
+                    },
+                )
+            ],
+        )
+
+        # Update User in PostgreSQL
+        stmt_user = select(User).where(User.id == user_id)
+        user_result = await session.execute(stmt_user)
+        user = user_result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found.",
+            )
+
+        user.onboarding_completed = True
+        user.price_profile = price_profile
+        await session.commit()
+
+        logger.info(
+            "Calibration completed for user %s: vector_dim=%d, "
+            "liked=%d, disliked=%d, price_profile=%s",
+            user_id,
+            len(user_vector),
+            len(request.liked_product_ids),
+            len(request.disliked_product_ids),
+            price_profile,
+        )
+
+        return CalibrationCompleteResponse(
+            success=True,
+            onboarding_completed=True,
+            cluster_count=len(liked_embeddings),
+            price_profile=price_profile,
         )

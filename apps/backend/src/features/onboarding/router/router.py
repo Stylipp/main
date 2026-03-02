@@ -3,6 +3,7 @@
 Endpoints:
     POST /api/onboarding/photos           - Upload photo with quality validation + embedding
     POST /api/onboarding/calibration-items - Get calibration swipe items from cold-start service
+    POST /api/onboarding/complete          - Complete calibration, compute user vector + price profile
 """
 
 from __future__ import annotations
@@ -21,6 +22,8 @@ from src.core.qdrant import get_qdrant_client
 from src.features.ai.service.quality_gate import QualityGateService
 from src.features.clustering.service.cold_start_service import ColdStartService
 from src.features.onboarding.schemas.schemas import (
+    CalibrationCompleteRequest,
+    CalibrationCompleteResponse,
     CalibrationItemsRequest,
     CalibrationItemsResponse,
     PhotoUploadResponse,
@@ -57,6 +60,8 @@ async def get_onboarding_service(request: Request) -> OnboardingService:
         quality_gate=_quality_gate,
         storage_service=_storage_service,
         cold_start_service=cold_start_service,
+        qdrant_client=qdrant_client,
+        settings=settings,
     )
 
 
@@ -117,5 +122,39 @@ async def get_calibration_items(
     """
     return await service.get_calibration_items(
         embeddings=body.embeddings,
+        session=session,
+    )
+
+
+@router.post(
+    "/complete",
+    response_model=CalibrationCompleteResponse,
+)
+async def complete_calibration(
+    body: CalibrationCompleteRequest,
+    user_id: Annotated[UUID, Depends(get_current_user)],
+    service: Annotated[OnboardingService, Depends(get_onboarding_service)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CalibrationCompleteResponse:
+    """Complete onboarding calibration and compute user style vector.
+
+    Accepts photo embeddings and liked/disliked product IDs from the
+    calibration swipe session. Computes the user style vector via
+    Modified Rocchio, initializes price profile from liked items,
+    stores the vector in Qdrant user_profiles collection, and marks
+    onboarding as completed in PostgreSQL.
+
+    Args:
+        body: Request with photo embeddings and liked/disliked product IDs.
+        user_id: Authenticated user ID from JWT token.
+        service: OnboardingService with all dependencies.
+        session: Async SQLAlchemy session.
+
+    Returns:
+        CalibrationCompleteResponse with success status and price profile.
+    """
+    return await service.complete_calibration(
+        user_id=user_id,
+        request=body,
         session=session,
     )

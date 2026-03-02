@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
-from src.core.qdrant import ensure_cluster_collection
+from src.core.qdrant import ensure_cluster_collection, ensure_user_profiles_collection
 from src.features.ai.router.router import router as ai_router
 from src.features.ai.service.embedding_service import EmbeddingService
 from src.features.auth.router.router import router as auth_router
@@ -47,12 +47,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     app.state.embedding_service = embedding_service
 
-    # Ensure cluster collection exists in Qdrant
+    # Ensure Qdrant collections exist
     try:
         await ensure_cluster_collection()
         logger.info("Cluster collection ready")
     except Exception:
         logger.exception("Failed to ensure cluster collection")
+
+    try:
+        await ensure_user_profiles_collection()
+        logger.info("User profiles collection ready")
+    except Exception:
+        logger.exception("Failed to ensure user profiles collection")
 
     yield
 

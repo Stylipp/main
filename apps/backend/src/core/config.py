@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     min_clusters: int = 10
     max_clusters: int = 200
 
+    # User profiles
+    user_profiles_collection: str = "user_profiles"
+
     # WooCommerce partner store (optional - for future partner integration)
     woo_store_url: str | None = None
     woo_consumer_key: str | None = None

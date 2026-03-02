@@ -68,6 +68,33 @@ async def ensure_cluster_collection() -> None:
         )
 
 
+async def ensure_user_profiles_collection() -> None:
+    """Create the user_profiles collection if it doesn't exist.
+
+    Stores user style vectors computed during onboarding calibration.
+
+    Collection config:
+    - 768-dimensional vectors (user style vectors from Modified Rocchio)
+    - Cosine similarity for distance metric
+    - On-disk payload storage for user metadata
+    """
+    settings = get_settings()
+    client = await get_qdrant_client()
+
+    collections = await client.get_collections()
+    collection_names = [c.name for c in collections.collections]
+
+    if settings.user_profiles_collection not in collection_names:
+        await client.create_collection(
+            collection_name=settings.user_profiles_collection,
+            vectors_config=VectorParams(
+                size=768,  # FashionSigLIP embedding dimension
+                distance=Distance.COSINE,
+            ),
+            on_disk_payload=True,
+        )
+
+
 async def health_check() -> bool:
     """Verify Qdrant connection and collection existence."""
     try:

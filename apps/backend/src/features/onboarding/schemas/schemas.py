@@ -70,3 +70,45 @@ class CalibrationItemsResponse(BaseModel):
 
     items: list[CalibrationItem]
     total: int
+
+
+class CalibrationCompleteRequest(BaseModel):
+    """Request body for completing calibration and computing user vector.
+
+    Attributes:
+        photo_embeddings: 1-2 photo embedding vectors from onboarding uploads.
+        liked_product_ids: Product IDs the user swiped right on.
+        disliked_product_ids: Product IDs the user swiped left on.
+    """
+
+    photo_embeddings: list[list[float]] = Field(
+        ...,
+        min_length=1,
+        max_length=2,
+        description="1-2 photo embeddings (768-dim each) from user uploads",
+    )
+    liked_product_ids: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Product IDs the user liked during calibration",
+    )
+    disliked_product_ids: list[str] = Field(
+        default_factory=list,
+        description="Product IDs the user disliked during calibration",
+    )
+
+
+class CalibrationCompleteResponse(BaseModel):
+    """Response after successful calibration completion.
+
+    Attributes:
+        success: Whether calibration completed successfully.
+        onboarding_completed: Whether onboarding is now marked as complete.
+        cluster_count: Number of nearest clusters used for the user vector.
+        price_profile: Computed price profile from liked items, or None.
+    """
+
+    success: bool
+    onboarding_completed: bool
+    cluster_count: int
+    price_profile: dict | None = None
