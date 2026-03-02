@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 3 complete — Clustering & Cold Start System (3/3 plans complete)
+**Current focus:** Phase 4 in progress — User Onboarding & Profiles (1/5 plans complete)
 
 ## Current Position
 
-Phase: 3 of 15 (Clustering & Cold Start System)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-03-01 — Completed 03-03-PLAN.md
+Phase: 4 of 15 (User Onboarding & Profiles)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-03-02 — Completed 04-01-PLAN.md
 
-Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓
+Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 1/5
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: ~10 min
-- Total execution time: ~2h 55m
+- Total plans completed: 19
+- Average duration: ~9 min
+- Total execution time: ~2h 59m
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 �
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
 | 3 | 3/3 ✓ | 14m | ~5m |
+| 4 | 1/5 | 4m | 4m |
 
 **Recent Trend:**
-- Last 5 plans: 02-05, 02-06, 03-01, 03-02, 03-03
-- Trend: Steady
+- Last 5 plans: 02-06, 03-01, 03-02, 03-03, 04-01
+- Trend: Steady/accelerating
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 �
 | 03-02 | Diversity clusters = 4th-5th ranked by similarity | Adjacent clusters, not random |
 | 03-03 | No auto-clustering in lifespan (API/entrypoint only) | CPU-intensive, would block startup |
 | 03-03 | 768-dim embedding validation on cold-start endpoint | Clear error messages for invalid input |
+| 04-01 | Task execution order reversed (Task 2 before Task 1) | Avoid broken intermediate state — model fields needed before schema references |
+| 04-01 | Service raises ValueError, router converts to HTTPException | Clean separation of concerns |
+| 04-01 | GET /auth/me queries DB for full User record | Frontend needs onboarding_completed status, not just JWT payload |
 
 ### Deferred Issues
 
@@ -85,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Completed 03-03-PLAN.md (Clustering API & Pipeline Integration) — Phase 3 complete
+Last session: 2026-03-02
+Stopped at: Completed 04-01-PLAN.md (Auth Backend: registration, login, expanded User model)
 Resume file: None
