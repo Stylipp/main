@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 4 in progress — User Onboarding & Profiles (1/5 plans complete)
+**Current focus:** Phase 4 in progress — User Onboarding & Profiles (2/5 plans complete)
 
 ## Current Position
 
 Phase: 4 of 15 (User Onboarding & Profiles)
-Plan: 1 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-03-02 — Completed 04-01-PLAN.md
+Last activity: 2026-03-02 — Completed 04-02-PLAN.md
 
-Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 1/5
+Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 2/5
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: ~9 min
-- Total execution time: ~2h 59m
+- Total execution time: ~3h 6m
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 �
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
 | 3 | 3/3 ✓ | 14m | ~5m |
-| 4 | 1/5 | 4m | 4m |
+| 4 | 2/5 | 11m | ~6m |
 
 **Recent Trend:**
-- Last 5 plans: 02-06, 03-01, 03-02, 03-03, 04-01
+- Last 5 plans: 03-01, 03-02, 03-03, 04-01, 04-02
 - Trend: Steady/accelerating
 
 ## Accumulated Context
@@ -72,6 +72,8 @@ Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 �
 | 04-01 | Task execution order reversed (Task 2 before Task 1) | Avoid broken intermediate state — model fields needed before schema references |
 | 04-01 | Service raises ValueError, router converts to HTTPException | Clean separation of concerns |
 | 04-01 | GET /auth/me queries DB for full User record | Frontend needs onboarding_completed status, not just JWT payload |
+| 04-02 | gamma=0.25 for Modified Rocchio (not PROJECT.md's 0.7) | Too aggressive for sparse calibration data (~5-6 dislikes); standard range 0.15-0.25 |
+| 04-02 | Enriched CalibrationItem with product details from PostgreSQL | ColdStartService only returns IDs; frontend needs title, price, image_url |
 
 ### Deferred Issues
 
@@ -90,5 +92,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 04-01-PLAN.md (Auth Backend: registration, login, expanded User model)
+Stopped at: Completed 04-02-PLAN.md (Onboarding Backend API: photo upload, calibration items, user vector)
 Resume file: None
