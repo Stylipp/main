@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 4 in progress — User Onboarding & Profiles (2/5 plans complete)
+**Current focus:** Phase 4 in progress — User Onboarding & Profiles (3/5 plans complete)
 
 ## Current Position
 
 Phase: 4 of 15 (User Onboarding & Profiles)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-03-02 — Completed 04-02-PLAN.md
+Last activity: 2026-03-02 — Completed 04-03-PLAN.md
 
-Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 2/5
+Progress: ████████████░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 3/5
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: ~9 min
-- Total execution time: ~3h 6m
+- Total execution time: ~3h 13m
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 �
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
 | 3 | 3/3 ✓ | 14m | ~5m |
-| 4 | 2/5 | 11m | ~6m |
+| 4 | 3/5 | 18m | ~6m |
 
 **Recent Trend:**
-- Last 5 plans: 03-01, 03-02, 03-03, 04-01, 04-02
+- Last 5 plans: 03-02, 03-03, 04-01, 04-02, 04-03
 - Trend: Steady/accelerating
 
 ## Accumulated Context
@@ -74,6 +74,9 @@ Progress: ███████████░░░░ Phase 1 ✓ | Phase 2 �
 | 04-01 | GET /auth/me queries DB for full User record | Frontend needs onboarding_completed status, not just JWT payload |
 | 04-02 | gamma=0.25 for Modified Rocchio (not PROJECT.md's 0.7) | Too aggressive for sparse calibration data (~5-6 dislikes); standard range 0.15-0.25 |
 | 04-02 | Enriched CalibrationItem with product details from PostgreSQL | ColdStartService only returns IDs; frontend needs title, price, image_url |
+| 04-03 | Lazy accessor pattern for auth store in API client | verbatimModuleSyntax prohibits CommonJS require(); setAuthStoreAccessor() avoids circular dep |
+| 04-03 | Zod v4 with @hookform/resolvers@5 | Current latest, native support, different API from v3 |
+| 04-03 | 401 interceptor only clears auth when token present | Prevents interference with login/register error handling |
 
 ### Deferred Issues
 
@@ -92,5 +95,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 04-02-PLAN.md (Onboarding Backend API: photo upload, calibration items, user vector)
+Stopped at: Completed 04-03-PLAN.md (Frontend Auth Infrastructure: Zustand store, API client, login/register, route guards)
 Resume file: None
