@@ -4,12 +4,8 @@ import LoginPage from './features/auth/components/LoginPage'
 import RegisterPage from './features/auth/components/RegisterPage'
 import PrivateRoute from './shared/components/PrivateRoute'
 import OnboardingLayout from './features/onboarding/components/OnboardingLayout'
+import PhotoUploadStep from './features/onboarding/components/PhotoUploadStep'
 import NotFoundPage from './pages/NotFoundPage'
-
-// Placeholder components for steps built in later tasks/plans
-function PhotoUploadStepPlaceholder() {
-  return <div>Photo upload (Task 2)</div>
-}
 
 function CalibrationStep() {
   return <div>Calibration coming soon (Plan 04-05)</div>
@@ -36,7 +32,7 @@ export default function App() {
         <Route element={<PrivateRoute />}>
           <Route path="/onboarding" element={<OnboardingLayout />}>
             <Route index element={<Navigate to="photos" replace />} />
-            <Route path="photos" element={<PhotoUploadStepPlaceholder />} />
+            <Route path="photos" element={<PhotoUploadStep />} />
             <Route path="calibrate" element={<CalibrationStep />} />
             <Route path="profile" element={<ProfileStep />} />
             <Route path="complete" element={<OnboardingComplete />} />
