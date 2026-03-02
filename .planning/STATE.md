@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 4 in progress — User Onboarding & Profiles (3/5 plans complete)
+**Current focus:** Phase 4 in progress — User Onboarding & Profiles (4/5 plans complete)
 
 ## Current Position
 
 Phase: 4 of 15 (User Onboarding & Profiles)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-03-02 — Completed 04-03-PLAN.md
+Last activity: 2026-03-02 — Completed 04-04-PLAN.md
 
-Progress: ████████████░░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 3/5
+Progress: █████████████░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 4/5
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
+- Total plans completed: 22
 - Average duration: ~9 min
-- Total execution time: ~3h 13m
+- Total execution time: ~3h 22m
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: ████████████░░░ Phase 1 ✓ | Phase 2 �
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
 | 3 | 3/3 ✓ | 14m | ~5m |
-| 4 | 3/5 | 18m | ~6m |
+| 4 | 4/5 | 27m | ~7m |
 
 **Recent Trend:**
-- Last 5 plans: 03-02, 03-03, 04-01, 04-02, 04-03
+- Last 5 plans: 03-03, 04-01, 04-02, 04-03, 04-04
 - Trend: Steady/accelerating
 
 ## Accumulated Context
@@ -77,6 +77,8 @@ Progress: ████████████░░░ Phase 1 ✓ | Phase 2 �
 | 04-03 | Lazy accessor pattern for auth store in API client | verbatimModuleSyntax prohibits CommonJS require(); setAuthStoreAccessor() avoids circular dep |
 | 04-03 | Zod v4 with @hookform/resolvers@5 | Current latest, native support, different API from v3 |
 | 04-03 | 401 interceptor only clears auth when token present | Prevents interference with login/register error handling |
+| 04-04 | React 19 "adjust state during render" pattern for direction tracking | refs-during-render and setState-in-effects prohibited by React 19 strict ESLint |
+| 04-04 | Direct progress reads from hooks instead of effect-based sync | Avoids react-hooks/set-state-in-effect violations |
 
 ### Deferred Issues
 
@@ -95,5 +97,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 04-03-PLAN.md (Frontend Auth Infrastructure: Zustand store, API client, login/register, route guards)
+Stopped at: Completed 04-04-PLAN.md (Onboarding Layout & Photo Upload: MobileStepper, AnimatePresence transitions, photo upload with compression)
 Resume file: None
