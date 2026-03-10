@@ -11,6 +11,7 @@ interface OnboardingState {
   isComplete: boolean
 
   addPhoto: (key: string, embedding: number[]) => void
+  setPhotos: (photos: Array<{ key: string; embedding: number[] }>) => void
   removePhoto: (index: number) => void
   setCalibrationItems: (ids: string[]) => void
   addLike: (productId: string) => void
@@ -39,6 +40,16 @@ export const useOnboardingStore = create<OnboardingState>()(
           photoKeys: [...state.photoKeys, key],
           photoEmbeddings: [...state.photoEmbeddings, embedding],
         })),
+
+      setPhotos: (photos) =>
+        set({
+          photoKeys: photos.map((photo) => photo.key),
+          photoEmbeddings: photos.map((photo) => photo.embedding),
+          calibrationItems: [],
+          calibrationLikes: [],
+          calibrationDislikes: [],
+          isComplete: false,
+        }),
 
       removePhoto: (index: number) =>
         set((state) => ({

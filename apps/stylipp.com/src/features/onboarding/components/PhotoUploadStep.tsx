@@ -30,8 +30,7 @@ const INITIAL_SLOT: PhotoSlot = {
 
 export default function PhotoUploadStep() {
   const navigate = useNavigate()
-  const addPhoto = useOnboardingStore((s) => s.addPhoto)
-  const photoKeys = useOnboardingStore((s) => s.photoKeys)
+  const setPhotos = useOnboardingStore((s) => s.setPhotos)
 
   const [slots, setSlots] = useState<[PhotoSlot, PhotoSlot]>([
     { ...INITIAL_SLOT },
@@ -142,19 +141,15 @@ export default function PhotoUploadStep() {
   )
 
   const handleContinue = useCallback(() => {
-    // Store completed photos in onboarding store
-    for (const slot of slots) {
-      if (
-        slot.status === 'complete' &&
-        slot.key &&
-        slot.embedding &&
-        !photoKeys.includes(slot.key)
-      ) {
-        addPhoto(slot.key, slot.embedding)
-      }
-    }
+    const completedPhotos = slots.flatMap((slot) =>
+      slot.status === 'complete' && slot.key && slot.embedding
+        ? [{ key: slot.key, embedding: slot.embedding }]
+        : []
+    )
+
+    setPhotos(completedPhotos)
     navigate('/onboarding/calibrate')
-  }, [slots, photoKeys, addPhoto, navigate])
+  }, [slots, setPhotos, navigate])
 
   // At least 1 photo must be successfully uploaded
   const completedCount = slots.filter((s) => s.status === 'complete').length
