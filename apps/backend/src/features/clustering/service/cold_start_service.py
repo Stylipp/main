@@ -1,19 +1,20 @@
-"""ColdStartService: Maps user photo embeddings to nearest style clusters
-and retrieves initial product recommendations with diversity injection.
+"""ColdStartService: Maps user photo embeddings to a similarity-ranked cold-start feed.
 
 When a new user uploads 1-2 outfit photos during onboarding, this service:
 1. Averages their photo embeddings into a single style vector
 2. Finds the nearest pre-computed style clusters in Qdrant
-3. Retrieves products from those clusters with mandatory diversity injection
+3. Uses those clusters as retrieval filters while ranking actual products
+   by cosine similarity to the user's averaged vector
+4. Injects diversity items from adjacent clusters into the final sequence
 
-Diversity injection (3/20 items from adjacent clusters) is MANDATORY per
-PROJECT.md to prevent echo chambers. This is not configurable.
+Diversity injection is MANDATORY per PROJECT.md to prevent echo chambers.
 """
 
 from __future__ import annotations
 
 import logging
 import math
+from collections.abc import Iterable
 
 import numpy as np
 from qdrant_client import AsyncQdrantClient
@@ -24,15 +25,12 @@ from src.features.clustering.schemas.schemas import ColdStartMatch, ColdStartRes
 
 logger = logging.getLogger(__name__)
 
-# Mandatory diversity injection: 3 out of 20 items from adjacent clusters.
-# Per PROJECT.md: "mandatory diversity injection (3/20 items from adjacent clusters)"
+# Mandatory diversity injection: 3 items from adjacent clusters.
 _DIVERSITY_COUNT = 3
-_PRIMARY_COUNT_DEFAULT = 17  # feed_size - _DIVERSITY_COUNT for default feed_size=20
 _PRIMARY_CLUSTER_COUNT = 3
 _DIVERSITY_CLUSTER_COUNT = 2
-
-# Batch size for Qdrant scroll operations
-_SCROLL_BATCH_SIZE = 100
+_SEARCH_OVERSAMPLE_FACTOR = 4
+_MIN_SEARCH_LIMIT = 24
 
 
 class ColdStartService:
@@ -46,6 +44,11 @@ class ColdStartService:
     def __init__(self, qdrant_client: AsyncQdrantClient, settings: Settings) -> None:
         self._qdrant = qdrant_client
         self._settings = settings
+
+    @staticmethod
+    def _average_embeddings(embeddings: list[list[float]]) -> list[float]:
+        """Average multiple photo embeddings into a single query vector."""
+        return np.mean(np.array(embeddings, dtype=np.float32), axis=0).tolist()
 
     async def find_nearest_clusters(
         self, embeddings: list[list[float]], top_k: int = 5
@@ -65,22 +68,24 @@ class ColdStartService:
             sorted by score descending.
         """
         # Average embeddings into a single style vector
-        avg_embedding = np.mean(np.array(embeddings, dtype=np.float32), axis=0).tolist()
+        avg_embedding = self._average_embeddings(embeddings)
 
         # Search style_clusters collection for nearest centroids
-        results = await self._qdrant.search(
+        response = await self._qdrant.query_points(
             collection_name=self._settings.cluster_collection,
-            query_vector=avg_embedding,
+            query=avg_embedding,
             limit=top_k,
         )
+        results = response.points
 
         clusters = []
         for hit in results:
+            payload = hit.payload or {}
             clusters.append(
                 {
-                    "cluster_index": hit.payload.get("cluster_index", hit.id),
+                    "cluster_index": payload.get("cluster_index", hit.id),
                     "score": hit.score,
-                    "product_count": hit.payload.get("product_count", 0),
+                    "product_count": payload.get("product_count", 0),
                 }
             )
 
@@ -92,50 +97,127 @@ class ColdStartService:
 
         return clusters
 
-    async def get_products_by_cluster(
-        self, cluster_index: int, limit: int = 20
+    @staticmethod
+    def _build_cluster_filter(cluster_indices: list[int]) -> Filter | None:
+        """Create an OR filter for a set of cluster ids."""
+        if not cluster_indices:
+            return None
+
+        return Filter(
+            should=[
+                FieldCondition(
+                    key="cluster_id",
+                    match=MatchValue(value=int(cluster_index)),
+                )
+                for cluster_index in cluster_indices
+            ]
+        )
+
+    async def _search_products(
+        self,
+        query_vector: list[float],
+        limit: int,
+        cluster_indices: list[int] | None = None,
     ) -> list[dict]:
-        """Retrieve products from a specific cluster.
-
-        Scrolls the "products" Qdrant collection filtered by cluster_id payload
-        matching the given cluster_index.
-
-        Args:
-            cluster_index: The cluster label to filter by.
-            limit: Maximum number of products to return.
-
-        Returns:
-            List of dicts with keys: product_id, payload, score (None for scroll).
-        """
-        records, _next_offset = await self._qdrant.scroll(
+        """Search products by vector similarity, optionally constrained to clusters."""
+        response = await self._qdrant.query_points(
             collection_name=self._settings.qdrant_collection,
-            scroll_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="cluster_id",
-                        match=MatchValue(value=cluster_index),
-                    )
-                ]
-            ),
-            limit=limit,
+            query=query_vector,
+            query_filter=self._build_cluster_filter(cluster_indices or []),
+            limit=max(1, limit),
             with_payload=True,
             with_vectors=False,
         )
+        results = response.points
 
         products = []
-        for point in records:
+        for hit in results:
+            payload = hit.payload or {}
+            cluster_index = payload.get("cluster_id")
             products.append(
                 {
-                    "product_id": str(point.id),
-                    "payload": point.payload or {},
+                    "product_id": str(hit.id),
+                    "score": float(hit.score),
+                    "cluster_index": (
+                        int(cluster_index) if cluster_index is not None else -1
+                    ),
                 }
             )
 
         logger.info(
-            "Retrieved %d products from cluster %d", len(products), cluster_index
+            "Vector search returned %d products%s",
+            len(products),
+            (
+                f" for clusters {cluster_indices}"
+                if cluster_indices
+                else " across the full catalog"
+            ),
         )
 
         return products
+
+    @staticmethod
+    def _to_matches(
+        products: Iterable[dict],
+        limit: int,
+        is_diversity: bool,
+        exclude_ids: set[str] | None = None,
+    ) -> list[ColdStartMatch]:
+        """Transform search hits into API matches with deduplication."""
+        if limit <= 0:
+            return []
+
+        seen = set(exclude_ids or set())
+        matches: list[ColdStartMatch] = []
+
+        for product in products:
+            product_id = product["product_id"]
+            if product_id in seen:
+                continue
+
+            seen.add(product_id)
+            matches.append(
+                ColdStartMatch(
+                    product_id=product_id,
+                    score=product["score"],
+                    cluster_index=product["cluster_index"],
+                    is_diversity=is_diversity,
+                )
+            )
+
+            if len(matches) >= limit:
+                break
+
+        return matches
+
+    @staticmethod
+    def _interleave_diversity(
+        primary_matches: list[ColdStartMatch],
+        diversity_matches: list[ColdStartMatch],
+    ) -> list[ColdStartMatch]:
+        """Spread diversity items through the feed instead of appending them all last."""
+        if not diversity_matches:
+            return primary_matches
+        if not primary_matches:
+            return diversity_matches
+
+        chunk_size = max(1, math.ceil(len(primary_matches) / len(diversity_matches)))
+        merged: list[ColdStartMatch] = []
+        primary_index = 0
+        diversity_index = 0
+
+        while primary_index < len(primary_matches) or diversity_index < len(
+            diversity_matches
+        ):
+            next_primary_index = min(len(primary_matches), primary_index + chunk_size)
+            merged.extend(primary_matches[primary_index:next_primary_index])
+            primary_index = next_primary_index
+
+            if diversity_index < len(diversity_matches):
+                merged.append(diversity_matches[diversity_index])
+                diversity_index += 1
+
+        return merged
 
     async def get_cold_start_feed(
         self, embeddings: list[list[float]], feed_size: int = 20
@@ -146,9 +228,9 @@ class ColdStartService:
         a) Find top 3 nearest clusters (primary clusters).
         b) Find 2 adjacent clusters ranked 4th-5th (diversity clusters).
         c) Allocate: (feed_size - 3) primary items + 3 diversity items.
-           Primary items distributed proportionally to similarity score.
-        d) Retrieve products from each cluster via scroll with cluster_id filter.
-        e) Build ColdStartResponse with is_diversity flag on diversity items.
+           Primary items are ranked by product-vector similarity.
+        d) Retrieve products via vector search within those cluster groups.
+        e) Interleave diversity items into the final list.
 
         Diversity injection is MANDATORY (per PROJECT.md). Always inject exactly
         3 items from adjacent clusters to prevent echo chambers.
@@ -165,6 +247,7 @@ class ColdStartService:
         nearest = await self.find_nearest_clusters(
             embeddings, top_k=total_clusters_needed
         )
+        avg_embedding = self._average_embeddings(embeddings)
 
         if not nearest:
             logger.warning("No clusters found. Returning empty cold-start feed.")
@@ -186,22 +269,46 @@ class ColdStartService:
         diversity_count = min(_DIVERSITY_COUNT, feed_size)
         primary_count = feed_size - diversity_count
 
-        # --- Fetch primary cluster products ---
-        primary_matches = await self._fetch_proportional_products(
-            clusters=primary_clusters,
-            total_items=primary_count,
+        primary_products = await self._search_products(
+            query_vector=avg_embedding,
+            cluster_indices=primary_indices,
+            limit=max(_MIN_SEARCH_LIMIT, primary_count * _SEARCH_OVERSAMPLE_FACTOR),
+        )
+        primary_matches = self._to_matches(
+            products=primary_products,
+            limit=primary_count,
             is_diversity=False,
         )
 
-        # --- Fetch diversity cluster products ---
-        diversity_matches = await self._fetch_proportional_products(
-            clusters=diversity_clusters,
-            total_items=diversity_count,
+        diversity_products = await self._search_products(
+            query_vector=avg_embedding,
+            cluster_indices=diversity_indices,
+            limit=max(_MIN_SEARCH_LIMIT, diversity_count * _SEARCH_OVERSAMPLE_FACTOR),
+        )
+        diversity_matches = self._to_matches(
+            products=diversity_products,
+            limit=diversity_count,
             is_diversity=True,
+            exclude_ids={match.product_id for match in primary_matches},
         )
 
-        # Combine: primary items first, then diversity items interleaved at end
-        all_matches = primary_matches + diversity_matches
+        all_matches = self._interleave_diversity(primary_matches, diversity_matches)
+
+        remaining_slots = feed_size - len(all_matches)
+        if remaining_slots > 0:
+            fallback_products = await self._search_products(
+                query_vector=avg_embedding,
+                limit=max(
+                    _MIN_SEARCH_LIMIT, remaining_slots * _SEARCH_OVERSAMPLE_FACTOR
+                ),
+            )
+            fallback_matches = self._to_matches(
+                products=fallback_products,
+                limit=remaining_slots,
+                is_diversity=False,
+                exclude_ids={match.product_id for match in all_matches},
+            )
+            all_matches.extend(fallback_matches)
 
         return ColdStartResponse(
             matches=all_matches,
@@ -209,77 +316,3 @@ class ColdStartService:
             diversity_clusters=diversity_indices,
             total_matches=len(all_matches),
         )
-
-    async def _fetch_proportional_products(
-        self,
-        clusters: list[dict],
-        total_items: int,
-        is_diversity: bool,
-    ) -> list[ColdStartMatch]:
-        """Fetch products from clusters proportional to their similarity scores.
-
-        Distributes the total_items budget across clusters weighted by their
-        similarity score. Each cluster gets at least 1 item (if budget allows).
-
-        Args:
-            clusters: List of cluster dicts with cluster_index and score.
-            total_items: Total number of products to fetch.
-            is_diversity: Whether these are diversity cluster items.
-
-        Returns:
-            List of ColdStartMatch items.
-        """
-        if not clusters or total_items <= 0:
-            return []
-
-        # Calculate proportional allocation based on similarity scores
-        total_score = sum(c["score"] for c in clusters)
-        allocations: list[int] = []
-
-        if total_score > 0:
-            for cluster in clusters:
-                proportion = cluster["score"] / total_score
-                alloc = max(1, math.floor(proportion * total_items))
-                allocations.append(alloc)
-        else:
-            # Equal distribution fallback
-            per_cluster = max(1, total_items // len(clusters))
-            allocations = [per_cluster] * len(clusters)
-
-        # Adjust allocations to match total_items exactly
-        current_total = sum(allocations)
-        if current_total < total_items:
-            # Add remaining to highest-scoring cluster
-            allocations[0] += total_items - current_total
-        elif current_total > total_items:
-            # Remove excess from lowest-scoring cluster
-            excess = current_total - total_items
-            for i in range(len(allocations) - 1, -1, -1):
-                reduction = min(excess, allocations[i] - 1)
-                allocations[i] -= reduction
-                excess -= reduction
-                if excess <= 0:
-                    break
-
-        # Fetch products from each cluster
-        matches: list[ColdStartMatch] = []
-        for cluster, alloc in zip(clusters, allocations):
-            if alloc <= 0:
-                continue
-
-            products = await self.get_products_by_cluster(
-                cluster_index=cluster["cluster_index"],
-                limit=alloc,
-            )
-
-            for product in products:
-                matches.append(
-                    ColdStartMatch(
-                        product_id=product["product_id"],
-                        score=cluster["score"],
-                        cluster_index=cluster["cluster_index"],
-                        is_diversity=is_diversity,
-                    )
-                )
-
-        return matches
