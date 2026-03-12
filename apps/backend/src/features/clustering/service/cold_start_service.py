@@ -50,6 +50,56 @@ class ColdStartService:
         """Average multiple photo embeddings into a single query vector."""
         return np.mean(np.array(embeddings, dtype=np.float32), axis=0).tolist()
 
+    async def _search_scored_points(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        limit: int,
+        query_filter: Filter | None = None,
+        with_payload: bool = True,
+        with_vectors: bool = False,
+    ) -> list:
+        """Run a Qdrant vector search compatible with the current client/server mix.
+
+        The deployed stack uses a newer client against an older Qdrant server.
+        `query_points()` maps to an endpoint that returns 404 on Qdrant 1.7,
+        while the older `search` path is still supported. Prefer public
+        `search` if available, then fall back to the underlying client's
+        `search`, and only use `query_points` when search is unavailable.
+        """
+        public_search = getattr(self._qdrant, "search", None)
+        if callable(public_search):
+            return await public_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                query_filter=query_filter,
+                limit=limit,
+                with_payload=with_payload,
+                with_vectors=with_vectors,
+            )
+
+        internal_client = getattr(self._qdrant, "_client", None)
+        internal_search = getattr(internal_client, "search", None)
+        if callable(internal_search):
+            return await internal_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                query_filter=query_filter,
+                limit=limit,
+                with_payload=with_payload,
+                with_vectors=with_vectors,
+            )
+
+        response = await self._qdrant.query_points(
+            collection_name=collection_name,
+            query=query_vector,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+        )
+        return response.points
+
     async def find_nearest_clusters(
         self, embeddings: list[list[float]], top_k: int = 5
     ) -> list[dict]:
@@ -71,12 +121,11 @@ class ColdStartService:
         avg_embedding = self._average_embeddings(embeddings)
 
         # Search style_clusters collection for nearest centroids
-        response = await self._qdrant.query_points(
+        results = await self._search_scored_points(
             collection_name=self._settings.cluster_collection,
-            query=avg_embedding,
+            query_vector=avg_embedding,
             limit=top_k,
         )
-        results = response.points
 
         clusters = []
         for hit in results:
@@ -120,15 +169,14 @@ class ColdStartService:
         cluster_indices: list[int] | None = None,
     ) -> list[dict]:
         """Search products by vector similarity, optionally constrained to clusters."""
-        response = await self._qdrant.query_points(
+        results = await self._search_scored_points(
             collection_name=self._settings.qdrant_collection,
-            query=query_vector,
+            query_vector=query_vector,
             query_filter=self._build_cluster_filter(cluster_indices or []),
             limit=max(1, limit),
             with_payload=True,
             with_vectors=False,
         )
-        results = response.points
 
         products = []
         for hit in results:

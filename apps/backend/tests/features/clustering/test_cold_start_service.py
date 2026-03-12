@@ -51,21 +51,23 @@ def test_interleave_diversity_spreads_items_through_feed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_find_nearest_clusters_uses_query_points_response_shape() -> None:
-    class FakeQdrantClient:
-        async def query_points(self, **kwargs):
+async def test_find_nearest_clusters_uses_legacy_search_when_needed() -> None:
+    class FakeInternalClient:
+        async def search(self, **kwargs):
             assert kwargs["collection_name"] == "style_clusters"
-            assert kwargs["query"] == [0.5, 0.5]
+            assert kwargs["query_vector"] == [0.5, 0.5]
             assert kwargs["limit"] == 3
-            return SimpleNamespace(
-                points=[
-                    SimpleNamespace(
-                        id=11,
-                        score=0.91,
-                        payload={"cluster_index": 7, "product_count": 12},
-                    )
-                ]
-            )
+            return [
+                SimpleNamespace(
+                    id=11,
+                    score=0.91,
+                    payload={"cluster_index": 7, "product_count": 12},
+                )
+            ]
+
+    class FakeQdrantClient:
+        def __init__(self) -> None:
+            self._client = FakeInternalClient()
 
     service = ColdStartService(
         qdrant_client=FakeQdrantClient(),
