@@ -1,8 +1,10 @@
-"""FeedService: Orchestrates candidate retrieval and multi-factor ranking.
+"""FeedService: Orchestrates candidate retrieval, ranking, and diversity injection.
 
 Two-stage feed pipeline:
 1. Qdrant retrieves ~100 candidates via user-vector cosine search with filtering
-2. Python re-ranks candidates with multi-factor scoring
+2. Python re-ranks candidates with multi-factor scoring and diversity injection
+
+Diversity injection is MANDATORY per PROJECT.md: 3/20 items from adjacent clusters.
 
 Uses qdrant_client.search() (NOT query_points()) for Qdrant v1.7.4 compatibility.
 """
@@ -10,12 +12,14 @@ Uses qdrant_client.search() (NOT query_points()) for Qdrant v1.7.4 compatibility
 from __future__ import annotations
 
 import logging
+import math
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
     FieldCondition,
     Filter,
     HasIdCondition,
+    MatchValue,
     Range,
 )
 from sqlalchemy import select
@@ -33,12 +37,18 @@ _SCORE_THRESHOLD = 0.2
 _PRICE_FILTER_LOW_FACTOR = 0.5
 _PRICE_FILTER_HIGH_FACTOR = 2.0
 
+# Diversity injection constants (hardcoded per PROJECT.md and Phase 03-02)
+_DIVERSITY_COUNT = 3
+_PRIMARY_CLUSTER_COUNT = 3
+_DIVERSITY_CLUSTER_COUNT = 2
+_DIVERSITY_CANDIDATE_LIMIT = 20
+
 # Scroll batch size for loading cluster priors
 _SCROLL_BATCH_SIZE = 100
 
 
 class FeedService:
-    """Orchestrates feed generation: retrieval and ranking.
+    """Orchestrates feed generation: retrieval, ranking, and diversity injection.
 
     Args:
         qdrant_client: Async Qdrant client instance.
@@ -255,7 +265,7 @@ class FeedService:
         session: AsyncSession,
         page_size: int = 20,
     ) -> list[RankedCandidate]:
-        """Generate a ranked feed for a user.
+        """Generate a ranked, diversity-injected feed for a user.
 
         Pipeline:
         1. Load user vector from Qdrant user_profiles
@@ -263,7 +273,8 @@ class FeedService:
         3. Load cluster priors from Qdrant style_clusters
         4. Retrieve ~100 candidates via Qdrant search()
         5. Apply multi-factor ranking
-        6. Return top page_size items
+        6. Inject diversity items from adjacent clusters
+        7. Return page_size items
 
         Args:
             user_id: The user's UUID string.
@@ -272,7 +283,7 @@ class FeedService:
             page_size: Number of items to return (default 20).
 
         Returns:
-            List of RankedCandidate sorted by final score.
+            List of RankedCandidate with diversity items interleaved.
 
         Raises:
             ValueError: If user vector is not found.
@@ -314,5 +325,175 @@ class FeedService:
 
         ranked = rank_candidates(candidates, user_price_profile, cluster_priors)
 
-        # Step 6: Return top page_size items
+        # Step 6: Diversity injection
+        ranked = await self._inject_diversity(
+            user_vector=user_vector,
+            cluster_priors=cluster_priors,
+            user_price_profile=user_price_profile,
+            primary_ranked=ranked,
+            seen_ids=seen_ids,
+            page_size=page_size,
+        )
+
+        # Step 7: Return page_size items
         return ranked[:page_size]
+
+    async def _identify_diversity_clusters(
+        self,
+        user_vector: list[float],
+    ) -> list[int]:
+        """Identify diversity clusters (4th-5th ranked by similarity).
+
+        Searches style_clusters collection with user_vector to find the
+        nearest clusters, then takes the 4th and 5th ranked as diversity
+        clusters (adjacent, not random -- per Phase 03-02 decision).
+
+        Returns:
+            List of cluster indices for diversity injection.
+        """
+        total_needed = _PRIMARY_CLUSTER_COUNT + _DIVERSITY_CLUSTER_COUNT
+        results = await self._qdrant.search(
+            collection_name=self._settings.cluster_collection,
+            query_vector=user_vector,
+            limit=total_needed,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        if len(results) <= _PRIMARY_CLUSTER_COUNT:
+            logger.info(
+                "Not enough clusters for diversity injection "
+                "(found %d, need %d for diversity).",
+                len(results),
+                total_needed,
+            )
+            return []
+
+        # Take 4th-5th ranked clusters as diversity clusters
+        diversity_clusters = []
+        for hit in results[_PRIMARY_CLUSTER_COUNT:total_needed]:
+            payload = hit.payload or {}
+            cluster_index = payload.get("cluster_index")
+            if cluster_index is not None:
+                diversity_clusters.append(int(cluster_index))
+
+        logger.info("Diversity clusters identified: %s", diversity_clusters)
+        return diversity_clusters
+
+    async def _inject_diversity(
+        self,
+        user_vector: list[float],
+        cluster_priors: dict[int, float],
+        user_price_profile: dict,
+        primary_ranked: list[RankedCandidate],
+        seen_ids: list[str],
+        page_size: int,
+    ) -> list[RankedCandidate]:
+        """Inject diversity items into the ranked feed.
+
+        Mandatory per PROJECT.md: 3/20 items from adjacent clusters.
+        - Reserve 3 slots for diversity items
+        - Take top (page_size - 3) from primary ranking
+        - Top 3 from diversity ranking
+        - Interleave evenly across the feed
+
+        Args:
+            user_vector: User's style vector.
+            cluster_priors: Cluster ID -> prior probability mapping.
+            user_price_profile: Dict with 'median' and 'std' keys.
+            primary_ranked: Primary ranked candidates.
+            seen_ids: Already seen product IDs.
+            page_size: Target feed size.
+
+        Returns:
+            Diversity-injected list of RankedCandidate.
+        """
+        # Identify diversity clusters
+        diversity_cluster_ids = await self._identify_diversity_clusters(user_vector)
+
+        if not diversity_cluster_ids:
+            return primary_ranked[:page_size]
+
+        # Build filter for diversity candidates: must be in diversity clusters
+        cluster_should = [
+            FieldCondition(
+                key="cluster_id",
+                match=MatchValue(value=cid),
+            )
+            for cid in diversity_cluster_ids
+        ]
+
+        # Exclude seen IDs and primary candidate IDs from diversity pool
+        primary_ids = {rc.product_id for rc in primary_ranked}
+        all_exclude_ids = list(set(seen_ids) | primary_ids)
+
+        must_not = []
+        if all_exclude_ids:
+            must_not.append(HasIdCondition(has_id=all_exclude_ids))
+
+        diversity_filter = Filter(
+            should=cluster_should,
+            must_not=must_not or None,
+        )
+
+        # Retrieve diversity candidates
+        diversity_candidates = await self._qdrant.search(
+            collection_name=self._settings.qdrant_collection,
+            query_vector=user_vector,
+            query_filter=diversity_filter,
+            limit=_DIVERSITY_CANDIDATE_LIMIT,
+            score_threshold=_SCORE_THRESHOLD,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        if not diversity_candidates:
+            logger.info("No diversity candidates found. Returning primary only.")
+            return primary_ranked[:page_size]
+
+        # Rank diversity candidates through the same pipeline
+        diversity_ranked = rank_candidates(
+            diversity_candidates, user_price_profile, cluster_priors
+        )
+
+        # Allocate slots: 3 diversity, rest primary
+        actual_diversity_count = min(_DIVERSITY_COUNT, len(diversity_ranked))
+        primary_count = page_size - actual_diversity_count
+
+        primary_slice = primary_ranked[:primary_count]
+        diversity_slice = diversity_ranked[:actual_diversity_count]
+
+        # Interleave diversity items evenly
+        return self._interleave_diversity(primary_slice, diversity_slice)
+
+    @staticmethod
+    def _interleave_diversity(
+        primary: list[RankedCandidate],
+        diversity: list[RankedCandidate],
+    ) -> list[RankedCandidate]:
+        """Spread diversity items evenly through the feed.
+
+        Follows the same interleaving pattern as cold_start_service:
+        divides primary items into chunks and inserts one diversity item
+        after each chunk.
+        """
+        if not diversity:
+            return primary
+        if not primary:
+            return diversity
+
+        chunk_size = max(1, math.ceil(len(primary) / len(diversity)))
+        merged: list[RankedCandidate] = []
+        primary_index = 0
+        diversity_index = 0
+
+        while primary_index < len(primary) or diversity_index < len(diversity):
+            next_primary = min(len(primary), primary_index + chunk_size)
+            merged.extend(primary[primary_index:next_primary])
+            primary_index = next_primary
+
+            if diversity_index < len(diversity):
+                merged.append(diversity[diversity_index])
+                diversity_index += 1
+
+        return merged
