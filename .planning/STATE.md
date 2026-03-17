@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 5 in progress — Feed Generation & Ranking (1/3 plans complete)
+**Current focus:** Phase 5 in progress — Feed Generation & Ranking (2/3 plans complete)
 
 ## Current Position
 
 Phase: 5 of 15 (Feed Generation & Ranking)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-17 — Completed 05-01-PLAN.md
+Last activity: 2026-03-17 — Completed 05-02-PLAN.md
 
-Progress: ██████████████░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4 ✓ | Phase 5: 1/3
+Progress: ██████████████░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4 ✓ | Phase 5: 2/3
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
+- Total plans completed: 25
 - Average duration: ~9 min
-- Total execution time: ~3h 34m
+- Total execution time: ~3h 41m
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: ██████████████░ Phase 1 ✓ | Phase 2 �
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
 | 3 | 3/3 ✓ | 14m | ~5m |
 | 4 | 5/5 ✓ | ~33m | ~7m |
-| 5 | 1/3 | 6m | 6m |
+| 5 | 2/3 | 13m | ~7m |
 
 **Recent Trend:**
-- Last 5 plans: 04-03, 04-04, 04-05, 05-01
+- Last 5 plans: 04-04, 04-05, 05-01, 05-02
 - Trend: Steady/accelerating
 
 ## Accumulated Context
@@ -82,6 +82,9 @@ Progress: ██████████████░ Phase 1 ✓ | Phase 2 �
 | 04-04 | Direct progress reads from hooks instead of effect-based sync | Avoids react-hooks/set-state-in-effect violations |
 | 05-01 | Missing cluster prior defaults to 0.0 (not 0.5) | Unknown clusters get no prior affinity rather than neutral |
 | 05-01 | Pure stdlib math only (no numpy) for scoring | Sufficient for exp/log calculations, avoids unnecessary dependency |
+| 05-02 | Uses qdrant_client.search() directly (not query_points()) | v1.7.4 compatibility; search() works, query_points() does not |
+| 05-02 | No caching of cluster priors | Deferred to Phase 12 per RESEARCH.md |
+| 05-02 | Shortfall handling: drop price filter first, then allow revisits | Pattern 4 from RESEARCH.md — narrow first, broaden on shortfall |
 
 ### Deferred Issues
 
@@ -100,5 +103,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Completed 05-01-PLAN.md (Scoring & Ranking Functions TDD: freshness decay, price affinity, normalization, weighted ranking — 37 tests)
+Stopped at: Completed 05-02-PLAN.md (FeedService with candidate retrieval, multi-factor ranking, diversity injection, shortfall handling)
 Resume file: None
