@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 5 in progress — Feed Generation & Ranking (2/3 plans complete)
+**Current focus:** Phase 5 complete — Feed Generation & Ranking (3/3 plans complete)
 
 ## Current Position
 
 Phase: 5 of 15 (Feed Generation & Ranking)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-03-17 — Completed 05-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-03-17 — Completed 05-03-PLAN.md
 
-Progress: ██████████████░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4 ✓ | Phase 5: 2/3
+Progress: ███████████████ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4 ✓ | Phase 5 ✓
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
+- Total plans completed: 26
 - Average duration: ~9 min
-- Total execution time: ~3h 41m
+- Total execution time: ~4h 0m
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: ██████████████░ Phase 1 ✓ | Phase 2 �
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
 | 3 | 3/3 ✓ | 14m | ~5m |
 | 4 | 5/5 ✓ | ~33m | ~7m |
-| 5 | 2/3 | 13m | ~7m |
+| 5 | 3/3 ✓ | 32m | ~11m |
 
 **Recent Trend:**
-- Last 5 plans: 04-04, 04-05, 05-01, 05-02
-- Trend: Steady/accelerating
+- Last 5 plans: 04-05, 05-01, 05-02, 05-03
+- Trend: Steady
 
 ## Accumulated Context
 
@@ -85,6 +85,9 @@ Progress: ██████████████░ Phase 1 ✓ | Phase 2 �
 | 05-02 | Uses qdrant_client.search() directly (not query_points()) | v1.7.4 compatibility; search() works, query_points() does not |
 | 05-02 | No caching of cluster priors | Deferred to Phase 12 per RESEARCH.md |
 | 05-02 | Shortfall handling: drop price filter first, then allow revisits | Pattern 4 from RESEARCH.md — narrow first, broaden on shortfall |
+| 05-03 | Explanation template selection: price > cluster_prior > default | Simple non-cosine factor dominance for 3 templates |
+| 05-03 | Product enrichment via external_id lookup | Qdrant stores external_id as product_id; join to Product model |
+| 05-03 | batch_id informational only (no Redis) | Redis-backed batch caching deferred to Phase 12 |
 
 ### Deferred Issues
 
@@ -103,5 +106,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Completed 05-02-PLAN.md (FeedService with candidate retrieval, multi-factor ranking, diversity injection, shortfall handling)
+Stopped at: Completed 05-03-PLAN.md (Feed API endpoint with cursor pagination, schemas, explanation templates — Phase 5 complete)
 Resume file: None
