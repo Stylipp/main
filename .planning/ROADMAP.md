@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Infrastructure** - Monorepo setup, Docker, databases, auth, backend structure, CI/CD + git hooks, Traefik + Cloudflare Tunnel baseline, object storage config, i18n scaffolding
 - [x] **Phase 2: Product Ingestion & Embeddings** - Bootstrap store, WooCommerce API, FashionSigLIP, image quality gate
 - [x] **Phase 3: Clustering & Cold Start System** - Pre-cluster catalog, cluster priors, nearest cluster matching
-- [ ] **Phase 4: User Onboarding & Profiles** - Photo upload (2), calibration swipes (15), user profiles, price profiling
+- [x] **Phase 4: User Onboarding & Profiles** - Photo upload (2), calibration swipes (15), user profiles, price profiling
 - [ ] **Phase 5: Feed Generation & Ranking** - Multi-factor ranking algorithm, diversity injection, feed API
 - [ ] **Phase 6: Swipe Interface & Feedback** - Custom swipe component, gesture physics, feedback pipeline
 - [ ] **Phase 7: Learning & Personalization** - User vector updates, weighted centroid, time decay, continuous learning
@@ -246,8 +246,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Foundation & Infrastructure | 9/9 | Complete | 2026-02-03 |
 | 2. Product Ingestion & Embeddings | 6/6 | Complete | 2026-02-18 |
 | 3. Clustering & Cold Start System | 3/3 | Complete | 2026-03-01 |
-| 4. User Onboarding & Profiles | 4/5 | In progress | - |
-| 5. Feed Generation & Ranking | 0/TBD | Not started | - |
+| 4. User Onboarding & Profiles | 5/5 | Complete | 2026-03-17 |
+| 5. Feed Generation & Ranking | 1/3 | In progress | - |
 | 6. Swipe Interface & Feedback | 0/TBD | Not started | - |
 | 7. Learning & Personalization | 0/TBD | Not started | - |
 | 8. Collections & Saves | 0/TBD | Not started | - |

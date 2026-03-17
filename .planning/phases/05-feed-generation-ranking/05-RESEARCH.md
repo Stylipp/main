@@ -9,11 +9,15 @@
 
 Researched the architecture and implementation patterns for building a multi-factor feed ranking system on top of Qdrant v1.7.4 with FastAPI. The system must combine cosine similarity (65%), cluster prior (15%), price affinity (10%), and freshness (10%) into a unified score, with mandatory diversity injection (3/20 items from adjacent clusters).
 
-**Critical finding:** Qdrant v1.7.4 does NOT support the Query API (v1.10+), Score-Boosting Reranker (v1.14+), or fusion methods (RRF/DBSF). All multi-factor ranking must happen application-side in Python after candidate retrieval from Qdrant. This is the standard two-stage pipeline pattern (candidate generation → application-side re-ranking) used by production recommendation systems.
+**Critical finding:** Qdrant v1.7.4 does not support the newer Query API, server-side score boosting, or fusion methods introduced in later releases. Multi-factor ranking must happen application-side in Python after candidate retrieval from Qdrant. This is the standard two-stage recommendation pattern: candidate generation -> application-side re-ranking.
 
-The existing cold-start service already implements the diversity injection pattern correctly (17 primary + 3 diversity items, interleaved). The feed service should follow this same pattern for warm-start users, replacing photo-based nearest-cluster matching with user-vector-based similarity search.
+The existing cold-start service already proves the diversity-injection pattern and the repo already computes a user vector plus price profile during onboarding. Phase 5 should build on those primitives rather than inventing a separate recommendation path.
 
-**Primary recommendation:** Two-stage pipeline — Qdrant retrieves ~100 candidates via user vector cosine search with seen-item exclusion, then Python re-ranks with weighted multi-factor scoring and diversity injection. Cache pre-ranked batches in Redis for pagination.
+**Primary recommendation:** Implement a two-stage feed pipeline. Qdrant retrieves about 100 candidates via user-vector cosine search with lightweight filtering, then Python re-ranks those candidates with weighted multi-factor scoring and diversity injection.
+
+**Minimal Phase 5 deliverable:** Ship `GET /api/feed` that returns 20 ranked items for an onboarded user using the stored user vector, application-side scoring, and basic seen-item exclusion. Keep pagination simple at first. Redis feed-batch caching is optional and can be deferred unless latency proves problematic.
+
+**Repo-specific constraint:** This repo already has a real Qdrant client/server compatibility concern recorded in `STATE.md`, and recent debugging confirmed that newer `query_points` paths can fail against the deployed Qdrant 1.7 server. Phase 5 should use the server-compatible `search` path or a compatibility wrapper, and exact client/server versions should be pinned before relying on newer Qdrant APIs.
 </research_summary>
 
 <standard_stack>
@@ -22,266 +26,235 @@ The existing cold-start service already implements the diversity injection patte
 ### Core
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| qdrant-client | >=1.7,<1.13 | Vector similarity search for candidates | Already in project, handles Stage 1 retrieval |
-| redis (aioredis) | Already in stack | Feed batch caching + seen items tracking | Already in project, O(1) set operations |
-| numpy | Already in stack | Score normalization and vector operations | Already used for embeddings |
+| qdrant-client | `>=1.7,<1.13` | Vector similarity search for candidates | Already in project, handles Stage 1 retrieval |
+| numpy | Existing | Score normalization and vector operations | Already used for embeddings and user vectors |
+| math / datetime | stdlib | Freshness decay and price scoring | No dependency needed |
 
-### Supporting
+### Optional
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| math (stdlib) | N/A | Exponential decay, Gaussian scoring | Price affinity + freshness calculations |
-| uuid (stdlib) | N/A | Cursor token generation | Opaque pagination cursors |
+| `redis.asyncio` | Add explicitly if needed | Feed batch caching and seen-item tracking | Optional for initial Phase 5, useful if caching is pulled forward |
+| `uuid` / `base64` / `json` | stdlib | Opaque cursor pagination | Use if cursor-based paging is added in first pass |
 
 ### Alternatives Considered
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| Application-side ranking | Qdrant Score-Boosting Reranker | Requires Qdrant v1.14+, would need server upgrade |
-| Application-side ranking | Qdrant Query API + fusion | Requires Qdrant v1.10+, would need server upgrade |
-| Redis seen-items Set | Qdrant has_id must_not filter only | Redis adds TTL expiry for seen items, reduces Qdrant filter size |
-| Redis feed cache | PostgreSQL materialized view | Redis is faster for ephemeral feed data with TTL |
-| rerankers/RankLLM Python libs | Custom weighted scoring | ML-model rerankers designed for NLP/RAG, not weighted feature scoring — overkill and wrong tool |
+| Application-side ranking | Qdrant score-boosting reranker | Requires newer Qdrant server |
+| Application-side ranking | Qdrant Query API + fusion | Requires newer Qdrant server |
+| Redis seen-items Set | Qdrant `has_id` filter only | Redis adds TTL and faster repeated set operations, but is not wired yet |
+| Redis feed cache | PostgreSQL materialized view | Redis is better for short-lived feed batches, but this is probably Phase 12 work |
+| ML reranking libraries | Custom weighted scoring | Overkill for this weighted recommendation problem |
 
-**No new dependencies needed.** The existing stack (qdrant-client, Redis, numpy, FastAPI) handles everything.
+**Repo reality:** Redis is configured in `apps/backend/.env.example`, but no Python Redis client is currently declared in `apps/backend/pyproject.toml`. If feed caching or Redis-backed seen-item tracking ships in Phase 5, add that dependency explicitly. If caching is deferred, Phase 5 can proceed with the existing Qdrant + numpy + FastAPI stack.
 </standard_stack>
 
 <architecture_patterns>
 ## Architecture Patterns
 
 ### Recommended Project Structure
-```
+```text
 src/features/feed/
-├── router/
-│   └── router.py          # GET /feed endpoint with pagination
-├── service/
-│   ├── feed_service.py     # Orchestrates candidate retrieval + ranking
-│   ├── ranking_service.py  # Multi-factor scoring logic
-│   └── feed_cache.py       # Redis feed batch caching + seen items
-├── schemas/
-│   └── schemas.py          # FeedRequest, FeedResponse, FeedItem
-└── utils/
-    └── scoring.py          # Score normalization helpers
+|-- router/
+|   `-- router.py          # GET /api/feed endpoint
+|-- service/
+|   |-- feed_service.py    # Orchestrates retrieval + ranking
+|   |-- ranking_service.py # Multi-factor scoring logic
+|   `-- feed_cache.py      # Optional Redis cache / seen-items helper
+|-- schemas/
+|   `-- schemas.py         # FeedResponse, FeedItem, cursor payloads
+`-- utils/
+    `-- scoring.py         # Normalization and scoring helpers
 ```
 
-### Pattern 1: Two-Stage Candidate Generation → Re-Ranking
-**What:** Retrieve broad candidates from Qdrant, then score and re-rank in application code
-**When to use:** Always — this is the standard recommendation system architecture
-**Why:** Vector search handles approximate nearest neighbors efficiently (Stage 1), but business logic (price, freshness, diversity) requires application-side scoring (Stage 2)
+### Pattern 1: Two-Stage Candidate Generation -> Re-Ranking
+**What:** Retrieve broad candidates from Qdrant, then score and re-rank in application code.  
+**When to use:** Always. This is the standard recommendation-system architecture for content-based ranking.  
+**Why:** Vector search handles nearest-neighbor retrieval efficiently, while price, freshness, cluster prior, and business rules belong in application code.
 
 ```python
-# Stage 1: Candidate Generation (Qdrant)
+# Stage 1: Candidate generation
 candidates = await qdrant_client.search(
     collection_name="products",
-    query_vector=user_vector,       # 768-dim from user_profiles collection
-    query_filter=models.Filter(
-        must_not=[
-            models.HasIdCondition(has_id=seen_product_ids)  # Exclude seen items
-        ],
-        must=[
-            models.FieldCondition(
-                key="price",
-                range=models.Range(
-                    gte=price_min * 0.5,   # Generous price filter
-                    lte=price_max * 2.0,   # Don't exclude borderline items
-                )
-            )
-        ]
-    ),
-    limit=100,  # Oversample 5x target (20 items)
-    score_threshold=0.3,  # Floor for minimum relevance
+    query_vector=user_vector,
+    query_filter=query_filter,
+    limit=100,
+    score_threshold=0.2,
 )
 
-# Stage 2: Application-Side Re-Ranking
+# Stage 2: Application-side scoring
 scored_items = []
 for candidate in candidates:
-    cosine_score = candidate.score  # Already 0-1 for cosine
+    cosine_score = candidate.score
     prior_score = get_cluster_prior(candidate.payload["cluster_id"])
-    price_score = compute_price_affinity(candidate.payload["price"], user_price_profile)
+    price_score = compute_price_affinity(
+        candidate.payload["price"],
+        user_price_profile,
+    )
     freshness_score = compute_freshness(candidate.payload["created_at"])
 
     final_score = (
-        0.65 * cosine_score +
-        0.15 * prior_score +
-        0.10 * price_score +
-        0.10 * freshness_score
+        0.65 * cosine_score
+        + 0.15 * prior_score
+        + 0.10 * price_score
+        + 0.10 * freshness_score
     )
     scored_items.append((candidate, final_score))
 
-scored_items.sort(key=lambda x: x[1], reverse=True)
+scored_items.sort(key=lambda item: item[1], reverse=True)
 ```
 
-### Pattern 2: Pre-Computed Feed Batches with Redis Caching
-**What:** Generate a full batch (e.g., 60 items) on first request, cache in Redis, paginate from cache
-**When to use:** When Qdrant search is the bottleneck and users request feed in small pages (20 items)
-**Why:** Avoids re-running expensive vector search + ranking on every page request
+### Pattern 2: Optional Feed Batch Caching
+**What:** Generate a larger feed batch, cache it briefly, paginate from cache.  
+**When to use:** When measured feed latency or repeated page-fetch cost becomes a real bottleneck.  
+**Why:** Avoids re-running expensive retrieval and re-ranking for every page request.
+
+For this repo, treat this as an optimization pattern, not a prerequisite. Start with uncached feed generation for the first Phase 5 delivery unless measurement shows it is too slow.
 
 ```python
-# Generate batch on first request or cache miss
-FEED_BATCH_SIZE = 60  # 3 pages worth
+FEED_BATCH_SIZE = 60
 FEED_CACHE_TTL = 300  # 5 minutes
 
-async def get_feed(user_id: str, cursor: Optional[str] = None) -> FeedResponse:
+async def get_feed(user_id: str, cursor: str | None = None) -> FeedResponse:
     cache_key = f"feed:{user_id}"
 
     if cursor:
-        # Retrieve cached batch, return next page
-        cached = await redis.get(cache_key)
-        if cached:
-            batch = deserialize(cached)
-            page = batch[cursor_offset:cursor_offset + PAGE_SIZE]
+        cached_batch = await redis.get(cache_key)
+        if cached_batch:
+            batch = deserialize(cached_batch)
+            page = batch[offset : offset + PAGE_SIZE]
             return FeedResponse(items=page, next_cursor=next_cursor)
 
-    # Generate fresh batch
     candidates = await retrieve_candidates(user_id, limit=100)
     ranked = rank_candidates(candidates, user_profile)
-    diversity_injected = inject_diversity(ranked, FEED_BATCH_SIZE)
+    final_batch = inject_diversity(ranked, FEED_BATCH_SIZE)
 
-    # Cache batch
-    await redis.setex(cache_key, FEED_CACHE_TTL, serialize(diversity_injected))
-
-    # Mark items as seen
-    product_ids = [item.product_id for item in diversity_injected]
-    await redis.sadd(f"seen:{user_id}", *product_ids)
-
-    page = diversity_injected[:PAGE_SIZE]
-    return FeedResponse(items=page, next_cursor=encode_cursor(PAGE_SIZE))
+    await redis.setex(cache_key, FEED_CACHE_TTL, serialize(final_batch))
+    return FeedResponse(items=final_batch[:PAGE_SIZE], next_cursor=encode_cursor(PAGE_SIZE))
 ```
 
-### Pattern 3: Diversity Injection via Cluster Slot Reservation
-**What:** Reserve 3/20 slots for items from adjacent (non-top) clusters, interleave them
-**When to use:** Every feed generation — mandatory per PROJECT.md
-**Why:** Prevents echo chambers, introduces serendipity
+### Pattern 3: Diversity Injection by Slot Reservation
+**What:** Reserve 3 out of 20 slots for adjacent-cluster items and interleave them.  
+**When to use:** Every feed generation, per `PROJECT.md`.  
+**Why:** Prevents echo chambers and preserves discovery.
 
 ```python
-# Already proven in cold_start_service.py — adapt for warm-start
-def inject_diversity(ranked_items: list, target_count: int) -> list:
-    PRIMARY_RATIO = 17 / 20  # 85% from top clusters
-    DIVERSITY_RATIO = 3 / 20  # 15% from adjacent clusters
+def inject_diversity(
+    primary_items: list[FeedCandidate],
+    diversity_items: list[FeedCandidate],
+    target_count: int = 20,
+) -> list[FeedCandidate]:
+    if not diversity_items:
+        return primary_items[:target_count]
 
-    primary_count = int(target_count * PRIMARY_RATIO)
-    diversity_count = target_count - primary_count
+    primary_target = max(0, target_count - min(3, len(diversity_items)))
+    primary_slice = primary_items[:primary_target]
+    diversity_slice = diversity_items[: target_count - len(primary_slice)]
 
-    primary = ranked_items[:primary_count]
-    # Diversity items: ranked by score but from non-top clusters
-    diversity = [item for item in ranked_items[primary_count:]
-                 if item.cluster_id not in top_cluster_ids][:diversity_count]
+    chunk_size = max(1, math.ceil(len(primary_slice) / max(1, len(diversity_slice))))
+    merged: list[FeedCandidate] = []
+    primary_index = 0
+    diversity_index = 0
 
-    # Interleave: insert diversity item every ~6 positions
-    result = []
-    div_idx = 0
-    for i, item in enumerate(primary):
-        result.append(item)
-        if (i + 1) % 6 == 0 and div_idx < len(diversity):
-            result.append(diversity[div_idx])
-            div_idx += 1
+    while primary_index < len(primary_slice) or diversity_index < len(diversity_slice):
+        next_primary = min(len(primary_slice), primary_index + chunk_size)
+        merged.extend(primary_slice[primary_index:next_primary])
+        primary_index = next_primary
 
-    # Append remaining diversity items
-    result.extend(diversity[div_idx:])
-    return result[:target_count]
+        if diversity_index < len(diversity_slice):
+            merged.append(diversity_slice[diversity_index])
+            diversity_index += 1
+
+    return merged[:target_count]
 ```
 
-### Anti-Patterns to Avoid
-- **Re-running Qdrant search per page:** Expensive and results change between pages. Cache the batch.
-- **Global score normalization:** Use per-batch min-max normalization, not global stats that drift.
-- **Appending diversity items at end:** Users never see them if they stop scrolling. Interleave instead.
-- **Hardcoded score thresholds:** Cosine similarity distributions vary by user. Use relative ranking, not absolute thresholds.
-- **Blocking on Redis cache misses:** Generate feed synchronously on first request, cache for subsequent pages.
+### Pattern 4: Narrow First, Broaden on Shortfall
+**What:** Try the best candidate filter first, then progressively widen if too few items remain.  
+**When to use:** Small catalog, young product inventory, or aggressive seen-item exclusion.  
+**Why:** Prevents empty feeds and protects UX.
+
+Example widening sequence:
+1. Use user vector + generous price filter + unseen items
+2. Drop price filter if candidate count is too low
+3. Drop cluster preference if candidate count is still too low
+4. Allow revisits only as a last resort
+
+### Recommended First Implementation Order
+1. `GET /api/feed`
+2. Candidate retrieval from Qdrant using stored user vector
+3. Application-side weighted scoring
+4. Diversity injection
+5. Basic pagination
+6. Optional cache only if needed
 </architecture_patterns>
 
 <dont_hand_roll>
-## Don't Hand-Roll
+## Do Not Hand-Roll
 
-Problems that look simple but have existing solutions:
+| Problem | Do Not Build | Use Instead | Why |
+|---------|--------------|-------------|-----|
+| Vector nearest-neighbor search | Custom brute-force distance code | Qdrant `search()` with cosine | Qdrant already solves ANN retrieval efficiently |
+| Score normalization | Custom utility package | Small local helper using numpy / simple math | Easy and transparent |
+| Cursor encoding | Homegrown ad hoc string format | Base64-encoded JSON | Standard, opaque, easy to debug |
+| Short-lived cache | In-process dictionary cache | Redis if caching is actually needed | Shared across workers, survives restarts |
+| Seen-item exclusion | Complicated SQL joins in first pass | Qdrant filter or simple per-user store | Keep Phase 5 lean |
 
-| Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
-| Vector nearest-neighbor search | Custom distance calculations | Qdrant `search()` with cosine | HNSW index is orders of magnitude faster than brute-force |
-| Seen items deduplication | Custom SQL tracking table | Redis Set (`SADD`/`SISMEMBER`) per user | O(1) operations, TTL auto-cleanup, already in stack |
-| Feed batch caching | Custom in-memory cache | Redis `SETEX` with TTL | Survives process restarts, shared across workers |
-| Score normalization | Custom normalization code | numpy `(x - min) / (max - min)` or simple arithmetic | Well-tested, handles edge cases (all same score) |
-| Cursor encoding | Custom cursor format | Base64-encoded JSON `{offset, batch_id}` | Standard pattern, opaque to client |
-| Price range filtering | Post-retrieval price filter | Qdrant payload `Range` filter | Reduces candidate set at search time, faster |
-
-**Key insight:** The multi-factor ranking itself IS the custom logic — it's a simple weighted sum that doesn't justify a library. Everything else (vector search, caching, filtering, seen-item tracking) should use existing infrastructure. The scoring formulas (Gaussian decay, exponential decay) are 3-5 lines of math each — simpler than importing a dependency.
+**Key insight:** The custom logic is the weighted ranking formula and diversity policy. Retrieval, filtering, and basic pagination should stay boring.
 </dont_hand_roll>
 
 <common_pitfalls>
 ## Common Pitfalls
 
 ### Pitfall 1: Score Scale Mismatch
-**What goes wrong:** Combining raw cosine similarity (0-1) with cluster prior (0.001-0.05) and freshness (0-1) produces rankings dominated by cosine similarity
-**Why it happens:** Different scoring factors operate on different scales and distributions
-**How to avoid:** Normalize ALL factors to [0,1] using min-max scaling within each batch before applying weights
-**Warning signs:** Ranking barely changes when adjusting weights; one factor always dominates
+**What goes wrong:** Cosine similarity dominates every other factor.  
+**Why it happens:** Cluster prior, freshness, and price naturally live on different scales.  
+**How to avoid:** Normalize all factors to `[0, 1]` within the candidate batch before applying weights.
 
-```python
-# WRONG: Raw scores
-final = 0.65 * cosine + 0.15 * prior + 0.10 * price + 0.10 * freshness
+### Pitfall 2: Empty or Tiny Feed
+**What goes wrong:** Users run out of unseen items quickly in a 300-500 product catalog.  
+**Why it happens:** Small catalog plus seen-item exclusion is unforgiving.  
+**How to avoid:** Widen retrieval progressively instead of returning empty results.
 
-# RIGHT: Normalized scores
-cosine_norm = (cosine - min_cosine) / (max_cosine - min_cosine + 1e-8)
-prior_norm = (prior - min_prior) / (max_prior - min_prior + 1e-8)
-# ... then combine normalized scores
-```
+### Pitfall 3: Cold-Start to Warm-Start Quality Drop
+**What goes wrong:** The first warm feed feels worse than the onboarding calibration feed.  
+**Why it happens:** Warm-start ranking uses different logic and thresholds than cold-start.  
+**How to avoid:** Keep the diversity pattern consistent and compare score distributions across the first few post-onboarding feed loads.
 
-### Pitfall 2: Empty Feed / Insufficient Candidates
-**What goes wrong:** User exhausts all products in their style clusters, feed returns empty
-**Why it happens:** Small catalog (300-500 products) + active user = quickly runs out of unseen items
-**How to avoid:** Implement fallback strategy — if primary search returns < threshold, widen search (lower score_threshold, remove cluster filter, or include seen items with "revisit" flag)
-**Warning signs:** Feed API returning fewer items than requested page size
+### Pitfall 4: Over-Aggressive Price Filtering
+**What goes wrong:** Good style matches disappear because they are slightly outside the learned range.  
+**Why it happens:** Price is used as a hard gate too early.  
+**How to avoid:** Use a generous price filter in candidate retrieval and let price affinity influence rank, not strict inclusion.
 
-### Pitfall 3: Stale Feed Cache Mismatch
-**What goes wrong:** User swipes on items, but cached feed still shows them
-**Why it happens:** Feed batch cached in Redis doesn't reflect real-time swipe actions
-**How to avoid:** On swipe action, remove item from cached batch OR invalidate cache. Don't serve already-swiped items.
-**Warning signs:** Users seeing items they already swiped on
+### Pitfall 5: Caching Too Early
+**What goes wrong:** Phase 5 becomes a caching/invalidation project instead of a feed-quality project.  
+**Why it happens:** Redis feels easy, but cache invalidation around swipes and seen-items is real complexity.  
+**How to avoid:** Defer caching until feed generation is actually working and measured.
 
-### Pitfall 4: Cold-Start vs Warm-Start Discontinuity
-**What goes wrong:** Feed quality drops sharply after onboarding ends and warm-start kicks in
-**Why it happens:** Cold-start uses cluster-based matching (proven), warm-start uses different logic with untested weights
-**How to avoid:** Warm-start should produce similar quality to cold-start for new users. Test with same user vectors. Consider blending: for users with < 30 interactions, mix cold-start and warm-start results.
-**Warning signs:** Users who complete onboarding but stop engaging after seeing first warm feed
-
-### Pitfall 5: Diversity Items Tanking Engagement
-**What goes wrong:** Diversity items have much lower scores, users notice quality drop
-**Why it happens:** Items from non-top clusters are inherently less similar to user preferences
-**How to avoid:** Diversity items should still meet minimum quality threshold. Pick top-scoring items from adjacent clusters (4th-5th ranked), not random clusters. Already done correctly in cold_start_service.py.
-**Warning signs:** Consistently low engagement on every 6th item in feed
-
-### Pitfall 6: Price Filter Too Aggressive
-**What goes wrong:** Feed excludes good matches because price is slightly outside user's range
-**Why it happens:** Tight price filter in Qdrant query removes candidates before scoring
-**How to avoid:** Use generous Qdrant price filter (0.5x min to 2x max), then let price_affinity scoring handle fine-grained ranking. The score weight (10%) naturally deprioritizes without hard-excluding.
-**Warning signs:** Feed consistently has fewer items than expected; good style matches missing
+### Pitfall 6: Qdrant Client/Server Feature Drift
+**What goes wrong:** The code uses a client method that maps to an endpoint unsupported by the deployed server.  
+**Why it happens:** Client and server versions are not pinned tightly enough.  
+**How to avoid:** Use the server-compatible `search` path and pin exact versions. Add at least one integration test against the real Qdrant container.
 </common_pitfalls>
 
 <code_examples>
 ## Code Examples
 
-Verified patterns from existing codebase and Qdrant documentation:
-
-### Multi-Factor Scoring Function
+### Freshness Score
 ```python
 import math
 from datetime import datetime, timezone
 
-# Constants
-WEIGHT_COSINE = 0.65
-WEIGHT_PRIOR = 0.15
-WEIGHT_PRICE = 0.10
-WEIGHT_FRESHNESS = 0.10
+FRESHNESS_LAMBDA = math.log(2) / 14  # 14-day half-life
 
-# 14-day half-life: λ = ln(2) / 14
-FRESHNESS_LAMBDA = math.log(2) / 14  # ≈ 0.0495
 
 def compute_freshness_score(created_at: datetime) -> float:
-    """Exponential decay with 14-day half-life.
-
-    Score = e^(-λ * days_old)
-    At 0 days: 1.0, at 14 days: 0.5, at 28 days: 0.25
-    """
     now = datetime.now(timezone.utc)
-    days_old = (now - created_at).total_seconds() / 86400
-    return math.exp(-FRESHNESS_LAMBDA * max(days_old, 0))
+    days_old = max((now - created_at).total_seconds() / 86400, 0)
+    return math.exp(-FRESHNESS_LAMBDA * days_old)
+```
+
+### Price Affinity
+```python
+import math
 
 
 def compute_price_affinity(
@@ -289,39 +262,38 @@ def compute_price_affinity(
     price_median: float,
     price_std: float,
 ) -> float:
-    """Gaussian decay centered on user's median price.
-
-    Uses log-space to avoid linear bias toward expensive items.
-    Score = e^(-(log(price) - log(median))^2 / (2 * log_σ^2))
-    """
-    if price_median <= 0 or product_price <= 0:
-        return 0.5  # Neutral if no price data
+    if product_price <= 0 or price_median <= 0:
+        return 0.5
 
     log_price = math.log(product_price)
     log_median = math.log(price_median)
-    # Use price_std in log-space, with floor to avoid division by zero
-    log_sigma = math.log(max(price_std, price_median * 0.3)) if price_std > 0 else 0.5
-    log_sigma = max(log_sigma, 0.1)  # Floor
+    sigma = max(price_std, price_median * 0.3)
+    log_sigma = max(math.log(sigma), 0.1)
 
-    exponent = -((log_price - log_median) ** 2) / (2 * log_sigma ** 2)
+    exponent = -((log_price - log_median) ** 2) / (2 * log_sigma**2)
     return math.exp(exponent)
-
-
-def normalize_scores(scores: list[float]) -> list[float]:
-    """Min-max normalize scores to [0, 1]."""
-    if not scores:
-        return scores
-    min_s = min(scores)
-    max_s = max(scores)
-    range_s = max_s - min_s
-    if range_s < 1e-8:
-        return [0.5] * len(scores)  # All equal → neutral
-    return [(s - min_s) / range_s for s in scores]
 ```
 
-### Qdrant Search with Seen-Item Exclusion (v1.7.4 compatible)
+### Score Normalization
+```python
+def normalize_scores(scores: list[float]) -> list[float]:
+    if not scores:
+        return []
+
+    minimum = min(scores)
+    maximum = max(scores)
+    spread = maximum - minimum
+
+    if spread < 1e-8:
+        return [0.5] * len(scores)
+
+    return [(score - minimum) / spread for score in scores]
+```
+
+### Candidate Retrieval with Legacy Search Compatibility
 ```python
 from qdrant_client import models
+
 
 async def retrieve_candidates(
     qdrant_client,
@@ -331,66 +303,50 @@ async def retrieve_candidates(
     price_max: float,
     limit: int = 100,
 ) -> list:
-    """Stage 1: Retrieve candidates from Qdrant with filters."""
-
+    must = []
     must_not = []
+
     if seen_ids:
         must_not.append(models.HasIdCondition(has_id=seen_ids))
 
-    must = []
     if price_min > 0 and price_max > 0:
-        must.append(models.FieldCondition(
-            key="price",
-            range=models.Range(
-                gte=price_min * 0.5,   # Generous: 50% below min
-                lte=price_max * 2.0,   # Generous: 200% above max
-            ),
-        ))
+        must.append(
+            models.FieldCondition(
+                key="price",
+                range=models.Range(
+                    gte=price_min * 0.5,
+                    lte=price_max * 2.0,
+                ),
+            )
+        )
 
-    query_filter = models.Filter(must=must, must_not=must_not) if must or must_not else None
+    query_filter = models.Filter(must=must, must_not=must_not) if (must or must_not) else None
 
-    results = await qdrant_client.search(
+    return await qdrant_client.search(
         collection_name="products",
         query_vector=user_vector,
         query_filter=query_filter,
         limit=limit,
-        score_threshold=0.2,  # Minimum cosine similarity floor
+        score_threshold=0.2,
+        with_payload=True,
+        with_vectors=False,
     )
-
-    return results
 ```
 
-### Redis Seen-Items Tracking
-```python
-SEEN_TTL = 86400 * 7  # 7 days — after a week, items can reappear
-
-async def mark_seen(redis, user_id: str, product_ids: list[str]):
-    """Add products to user's seen set with TTL."""
-    key = f"seen:{user_id}"
-    if product_ids:
-        await redis.sadd(key, *product_ids)
-        await redis.expire(key, SEEN_TTL)
-
-async def get_seen_ids(redis, user_id: str) -> list[str]:
-    """Get all seen product IDs for a user."""
-    key = f"seen:{user_id}"
-    members = await redis.smembers(key)
-    return list(members)
-```
-
-### Cursor-Based Feed Pagination
+### Opaque Cursor
 ```python
 import base64
 import json
 
+
 def encode_cursor(offset: int, batch_id: str) -> str:
-    """Encode pagination cursor as opaque base64 token."""
-    data = json.dumps({"o": offset, "b": batch_id})
-    return base64.urlsafe_b64encode(data.encode()).decode()
+    payload = json.dumps({"o": offset, "b": batch_id})
+    return base64.urlsafe_b64encode(payload.encode()).decode()
+
 
 def decode_cursor(cursor: str) -> tuple[int, str]:
-    """Decode cursor to (offset, batch_id)."""
-    data = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
+    payload = base64.urlsafe_b64decode(cursor.encode()).decode()
+    data = json.loads(payload)
     return data["o"], data["b"]
 ```
 </code_examples>
@@ -398,89 +354,79 @@ def decode_cursor(cursor: str) -> tuple[int, str]:
 <sota_updates>
 ## State of the Art (2025-2026)
 
-| Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
-| Single-stage vector search | Two-stage: retrieve + re-rank | Industry standard | Allows business logic without custom vector DB features |
-| Qdrant basic search API | Qdrant Query API + fusion (v1.10+) | 2024 | Unified API for hybrid search, but requires v1.10+ |
-| Application-side reranking | Qdrant Score-Boosting Reranker (v1.14+) | 2025 | Server-side formula reranking, but requires v1.14+ |
-| Manual score combination | Weighted RRF (v1.17+) | 2025 | Per-prefetch importance weights, but requires v1.17+ |
-| Offset pagination | Cursor-based pagination | Standard | Stable for dynamic feeds, no skip/duplicate issues |
-| SQL seen-items table | Redis Set with TTL | Standard | O(1) operations, auto-cleanup |
+| Old Approach | Current Approach | Impact |
+|--------------|------------------|--------|
+| Single-stage vector ranking | Two-stage retrieve + re-rank | Standard production architecture |
+| Offset pagination | Cursor-based pagination | More stable for dynamic feeds |
+| Server-side magic ranking | Transparent application-side scoring | Easier to debug and tune on older infrastructure |
+| Heavy recommender stacks | Lean content-based ranking | Better fit for early-stage catalog and low user count |
 
-**New tools/patterns to consider:**
-- **Qdrant upgrade path**: Upgrading from v1.7.4 to v1.14+ would unlock server-side score boosting, eliminating application-side re-ranking. Consider for Phase 12 (Performance & Caching).
-- **Redis Bloom Filter**: For very large catalogs (10K+ products), Bloom filter is more memory-efficient than Set for seen-item tracking. Not needed at 300-500 products.
-- **DBSF fusion**: Distribution-Based Score Fusion (Qdrant v1.11+) handles score normalization automatically. Would simplify multi-factor ranking if Qdrant upgraded.
-
-**Deprecated/outdated:**
-- **ML reranking models (rerankers, RankLLM)**: Designed for NLP/RAG document reranking. Wrong tool for weighted feature scoring in recommendation systems.
-- **Collaborative filtering libraries**: Require critical mass of users. Content-based only for MVP (per PROJECT.md).
-- **Qdrant `recommend()` API**: While available in v1.7.4, it's designed for positive/negative example recommendation, not multi-factor scoring. Use `search()` with user vector instead.
+**Useful upgrade path later:** If Qdrant is upgraded and version-pinned cleanly, newer query and server-side ranking features may become available. That is a later optimization, not a Phase 5 dependency.
 </sota_updates>
 
 <open_questions>
 ## Open Questions
 
-1. **Feed batch size vs freshness tradeoff**
-   - What we know: Caching 60-item batches reduces Qdrant load, but cached items may become stale (already swiped elsewhere)
-   - What's unclear: Optimal batch size and TTL for 300-500 product catalog with active users
-   - Recommendation: Start with 60 items / 5-minute TTL. Monitor cache hit rate and stale-item rate. Adjust in Phase 12.
+1. **How strict should seen-item exclusion be in the first feed version?**
+   - What we know: hard exclusion improves UX, but the catalog is small
+   - What is unclear: whether strict exclusion will starve the feed too quickly
+   - Recommendation: start with exclusion, log shortfall rate, widen if necessary
 
-2. **Minimum cosine similarity threshold**
-   - What we know: `score_threshold=0.2` is a conservative floor. Too high = empty feeds, too low = irrelevant items.
-   - What's unclear: What threshold produces good recommendations for this specific embedding space (FashionSigLIP 768-dim)
-   - Recommendation: Start at 0.2, log score distributions, tune based on user engagement data in Phase 11.
+2. **What is the right cosine threshold for FashionSigLIP in this catalog?**
+   - What we know: `0.2` is a conservative floor
+   - What is unclear: actual score distribution for this specific catalog
+   - Recommendation: start at `0.2`, log candidate counts and score ranges
 
-3. **Warm-start transition smoothness**
-   - What we know: Users go from cold-start (cluster-based) to warm-start (user-vector-based) after onboarding
-   - What's unclear: Whether the transition produces a noticeable quality shift
-   - Recommendation: Log both cold-start and warm-start scores for first 5 feeds after onboarding. Compare distributions.
+3. **Should Phase 5 include caching?**
+   - What we know: caching can help, but invalidation adds complexity
+   - What is unclear: whether Phase 5 feed latency will justify it
+   - Recommendation: do not make caching mandatory in the first Phase 5 plan
 
-4. **Seen items set size management**
-   - What we know: With ~500 products, users could exhaust catalog. Redis Set TTL handles cleanup.
-   - What's unclear: At what seen/total ratio the feed quality degrades noticeably
-   - Recommendation: When seen items > 70% of catalog, reset seen set and allow revisits with "You might like this again" flag. Track in Phase 11.
+4. **How smooth is the cold-start to warm-start transition?**
+   - What we know: users complete onboarding and then rely on the stored user vector
+   - What is unclear: whether the first warm feed feels noticeably worse
+   - Recommendation: instrument and compare the first few warm feeds after onboarding
 </open_questions>
 
 <sources>
 ## Sources
 
 ### Primary (HIGH confidence)
-- Qdrant v1.7.4 search API — verified against project's `docker-compose.yml` (image: `qdrant/qdrant:v1.7.4`) and `pyproject.toml` (`qdrant-client>=1.7,<1.13`)
-- Qdrant filtering documentation — `has_id` must_not filter for seen-item exclusion, Range filter for price
-- Existing codebase `cold_start_service.py` — diversity injection pattern (3/20 from adjacent clusters, interleaved)
-- Existing codebase `user_vector.py` — user vector computation (Modified Rocchio), price profile (IQR-based)
-- Existing codebase `qdrant.py` — collections structure (products, style_clusters, user_profiles), all 768-dim cosine
+- Existing repo `cold_start_service.py` - current diversity injection and Qdrant compatibility constraints
+- Existing repo `user_vector.py` - user vector computation and price profile logic
+- Existing repo `qdrant.py` - collections and vector shape
+- Existing repo `PROJECT.md` - ranking weights and diversity requirement
+- Existing repo `ROADMAP.md` - Phase 5 scope and later-phase caching/performance separation
+- Existing repo `STATE.md` - documented Qdrant client/server mismatch concern
 
 ### Secondary (MEDIUM confidence)
-- Qdrant 1.14 blog post — Score-Boosting Reranker details (verified, but not usable at v1.7.4)
-- Qdrant hybrid queries documentation — Prefetch, RRF, DBSF fusion (verified, but requires v1.10+)
-- Google ML recommendation re-ranking guide — Two-stage pipeline pattern (industry standard)
-- Multi-stage recommender systems (Towards Data Science) — Candidate generation → scoring → re-ranking
-- Score normalization techniques (OpenSearch, Medium) — Min-max scaling for combining heterogeneous scores
+- Qdrant 1.7 search/filtering documentation
+- General recommendation-system literature on candidate generation -> re-ranking
+- Standard pagination and caching patterns used in feed systems
 
-### Tertiary (LOW confidence - needs validation)
-- Exponential decay half-life formula — Standard math, but 14-day half-life specific to PROJECT.md spec. Actual optimal decay rate TBD from user data.
-- Gaussian price affinity in log-space — Sound mathematical approach, but specific σ parameter needs tuning with real price distributions.
+### Tertiary (LOW confidence, tune with real data)
+- Exact cosine threshold for good FashionSigLIP retrieval in this catalog
+- Exact price-affinity shape and sigma tuning
+- Exact freshness half-life effect on engagement
 </sources>
 
 <metadata>
 ## Metadata
 
 **Research scope:**
-- Core technology: Qdrant v1.7.4 vector search + FastAPI + Redis
-- Ecosystem: No new libraries needed — existing stack covers all requirements
-- Patterns: Two-stage pipeline, pre-computed feed batches, diversity injection, cursor pagination
-- Pitfalls: Score normalization, empty feeds, cache staleness, price filter aggressiveness
+- Core technology: Qdrant v1.7.4 vector search + FastAPI
+- Optional optimization: Redis caching + seen-item tracking
+- Patterns: two-stage ranking, optional feed-batch caching, diversity injection, cursor pagination
+- Main repo constraint: Qdrant client/server compatibility
 
 **Confidence breakdown:**
-- Standard stack: HIGH - no new dependencies, verified existing stack capabilities
-- Architecture: HIGH - two-stage pipeline is industry standard, cold_start_service.py proves the pattern
-- Pitfalls: HIGH - well-documented in recommendation system literature, specific to our Qdrant version constraints
-- Code examples: HIGH - based on existing codebase patterns and verified Qdrant v1.7.4 API
+- Standard stack: MEDIUM-HIGH - ranking path is clear, Redis is not wired yet
+- Architecture: HIGH - two-stage pipeline is the right fit
+- Pitfalls: HIGH - grounded in this repo's actual constraints
+- Code examples: MEDIUM-HIGH - valid for the current stack, but must respect the compatibility layer
 
 **Research date:** 2026-03-12
-**Valid until:** 2026-04-12 (30 days — stack is stable, no version changes planned)
+**Valid until:** 2026-04-12
 </metadata>
 
 ---

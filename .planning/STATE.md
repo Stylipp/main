@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 4 in progress — User Onboarding & Profiles (4/5 plans complete)
+**Current focus:** Phase 5 in progress — Feed Generation & Ranking (1/3 plans complete)
 
 ## Current Position
 
-Phase: 4 of 15 (User Onboarding & Profiles)
-Plan: 4 of 5 in current phase
+Phase: 5 of 15 (Feed Generation & Ranking)
+Plan: 1 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-02 — Completed 04-04-PLAN.md
+Last activity: 2026-03-17 — Completed 05-01-PLAN.md
 
-Progress: █████████████░░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4: 4/5
+Progress: ██████████████░ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4 ✓ | Phase 5: 1/3
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
+- Total plans completed: 24
 - Average duration: ~9 min
-- Total execution time: ~3h 22m
+- Total execution time: ~3h 34m
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: █████████████░░ Phase 1 ✓ | Phase 2 �
 | 1 | 9/9 ✓ | ~1h 34m | ~10m |
 | 2 | 6/6 ✓ | ~1h 6m | ~11m |
 | 3 | 3/3 ✓ | 14m | ~5m |
-| 4 | 4/5 | 27m | ~7m |
+| 4 | 5/5 ✓ | ~33m | ~7m |
+| 5 | 1/3 | 6m | 6m |
 
 **Recent Trend:**
-- Last 5 plans: 03-03, 04-01, 04-02, 04-03, 04-04
+- Last 5 plans: 04-03, 04-04, 04-05, 05-01
 - Trend: Steady/accelerating
 
 ## Accumulated Context
@@ -79,6 +80,8 @@ Progress: █████████████░░ Phase 1 ✓ | Phase 2 �
 | 04-03 | 401 interceptor only clears auth when token present | Prevents interference with login/register error handling |
 | 04-04 | React 19 "adjust state during render" pattern for direction tracking | refs-during-render and setState-in-effects prohibited by React 19 strict ESLint |
 | 04-04 | Direct progress reads from hooks instead of effect-based sync | Avoids react-hooks/set-state-in-effect violations |
+| 05-01 | Missing cluster prior defaults to 0.0 (not 0.5) | Unknown clusters get no prior affinity rather than neutral |
+| 05-01 | Pure stdlib math only (no numpy) for scoring | Sufficient for exp/log calculations, avoids unnecessary dependency |
 
 ### Deferred Issues
 
@@ -96,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Completed 04-04-PLAN.md (Onboarding Layout & Photo Upload: MobileStepper, AnimatePresence transitions, photo upload with compression)
+Last session: 2026-03-17
+Stopped at: Completed 05-01-PLAN.md (Scoring & Ranking Functions TDD: freshness decay, price affinity, normalization, weighted ranking — 37 tests)
 Resume file: None
