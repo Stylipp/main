@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import xml.etree.ElementTree as ET
@@ -19,14 +20,23 @@ _HEADERS = {
 }
 
 
-async def _fetch_xml(url: str, timeout: float = 30.0) -> str | None:
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.get(url, headers=_HEADERS)
-            r.raise_for_status()
-            return r.text
-    except Exception:
-        return None
+async def _fetch_xml(url: str, timeout: float = 30.0, max_retries: int = 3) -> str | None:
+    for attempt in range(max_retries + 1):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                r = await client.get(url, headers=_HEADERS)
+                if r.status_code == 429 and attempt < max_retries:
+                    wait = 2 ** (attempt + 1)
+                    logger.info("429 on sitemap %s — waiting %ds (retry %d/%d)", url, wait, attempt + 1, max_retries)
+                    await asyncio.sleep(wait)
+                    continue
+                r.raise_for_status()
+                return r.text
+        except httpx.HTTPStatusError:
+            return None
+        except Exception:
+            return None
+    return None
 
 
 def _parse_urls(xml_text: str) -> list[str]:
@@ -62,7 +72,9 @@ def _parse_sub_sitemaps(xml_text: str) -> list[str]:
 
 async def discover_sitemap(base_url: str) -> str | None:
     """Try common sitemap paths, return first that works."""
-    for path in SITEMAP_CANDIDATES:
+    for i, path in enumerate(SITEMAP_CANDIDATES):
+        if i > 0:
+            await asyncio.sleep(1)  # avoid rate limits during discovery
         url = f"{base_url}{path}"
         if await _fetch_xml(url) is not None:
             logger.info("Discovered sitemap: %s", url)
