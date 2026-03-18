@@ -1,0 +1,42 @@
+stores:
+  - id: "mekimi"
+    name: "Mekimi"
+    enabled: true
+    sitemap_url: "https://mekimi.co.il/product-sitemap.xml"
+    base_url: "https://mekimi.co.il"
+    currency: "ILS"
+    rate_limit_seconds: 0.5
+    timeout_seconds: 30
+    product_url_pattern: "/product/"
+    woo_store_id: "woo-cloudways"
+    selectors:
+      title: ".product_title h1, h1.product_title"
+      price_regular: ".summary .price del .woocommerce-Price-amount"
+      price_sale: ".summary .price ins .woocommerce-Price-amount"
+      price_single: ".summary .price .woocommerce-Price-amount"
+      description: ".woocommerce-product-details__short-description"
+      categories: ".woocommerce-breadcrumb a"
+      images: ".woocommerce-product-gallery img[data-large_image]"
+      stock_in: ".stock.in-stock"
+      stock_out: ".stock.out-of-stock"
+
+  - id: "exsos"
+    name: "Exsos"
+    enabled: false
+    sitemap_url: "https://exsos.co.il/product-sitemap.xml"
+    base_url: "https://exsos.co.il"
+    currency: "ILS"
+    rate_limit_seconds: 0.5
+    timeout_seconds: 30
+    product_url_pattern: "/product/"
+    woo_store_id: "woo-cloudways"
+    selectors:
+      title: ".product_title h1, h1.product_title"
+      price_regular: ".summary .price del .woocommerce-Price-amount"
+      price_sale: ".summary .price ins .woocommerce-Price-amount"
+      price_single: ".summary .price .woocommerce-Price-amount"
+      description: ".woocommerce-product-details__short-description"
+      categories: ".woocommerce-breadcrumb a"
+      images: ".woocommerce-product-gallery img[data-large_image]"
+      stock_in: ".stock.in-stock"
+      stock_out: ".stock.out-of-stock"
