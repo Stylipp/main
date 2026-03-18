@@ -19,14 +19,18 @@ from .schemas import ScrapedProduct
 
 logger = logging.getLogger(__name__)
 
-_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+}
 
 
 async def scrape_product(url: str, store: StoreConfig) -> ScrapedProduct | None:
     """Scrape one product page. Returns None on failure."""
     try:
         async with httpx.AsyncClient(timeout=store.timeout_seconds) as client:
-            r = await client.get(url, headers={"User-Agent": _UA}, follow_redirects=True)
+            r = await client.get(url, headers=_HEADERS, follow_redirects=True)
             r.raise_for_status()
 
         soup = BeautifulSoup(r.text, "html.parser")

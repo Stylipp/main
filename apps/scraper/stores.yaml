@@ -1,5 +1,33 @@
 stores:
+  # WooCommerce
   - https://mekimi.co.il
   - https://xsosshirts.co.il
   - https://rachel-h.co.il
   - https://www.shoofra.co.il
+  - https://cstyle.co.il
+  - https://www.levi.co.il
+  - https://simplylove.com
+  - https://shoshiyegudayov.co.il
+  - https://yucca.co.il
+
+  # Shopify
+  - url: https://second.co.il
+    platform: shopify
+  - url: https://blueberrytlv.co.il
+    platform: shopify
+  - url: https://addictonline.co.il
+    platform: shopify
+  - url: https://twentysix26.com
+    platform: shopify
+  - url: https://365mashbir.co.il
+    platform: shopify
+  - url: https://fashionclub.co.il
+    platform: shopify
+
+  # Magento
+  - url: https://www.golbary.co.il
+    platform: magento
+  - url: https://www.golf-il.co.il
+    platform: magento
+  - url: https://reserved-il.com
+    platform: magento

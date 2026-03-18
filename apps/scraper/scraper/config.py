@@ -40,9 +40,20 @@ _SHOPIFY_SELECTORS = {
     "images": ".product-single__photo img, .product__photo img, .product-featured-media img",
 }
 
+# Magento CSS selectors (fallback when no JSON-LD)
+_MAGENTO_SELECTORS = {
+    "title": "h1.page-title span, h1.product-name",
+    "price_regular": ".old-price .price, .price-box .price-old .price",
+    "price_sale": ".special-price .price, .price-box .special-price .price",
+    "price_single": ".price-box .price, [data-price-type='finalPrice'] .price",
+    "description": ".product.attribute.description .value, #description .value",
+    "categories": ".breadcrumbs a, nav.breadcrumbs a",
+    "images": ".gallery-placeholder img, .fotorama__img, .product.media img",
+}
+
 
 def _detect_platform(hostname: str) -> str:
-    """Guess platform from domain. Returns 'shopify' or 'woocommerce'."""
+    """Guess platform from domain. Returns 'shopify', 'magento', or 'woocommerce'."""
     if hostname and hostname.endswith(".myshopify.com"):
         return "shopify"
     return "woocommerce"
@@ -70,9 +81,16 @@ class StoreConfig:
         if self.platform == "shopify":
             self.product_url_pattern = "/products/"
             self.selectors = _SHOPIFY_SELECTORS
+        elif self.platform == "magento":
+            self.product_url_pattern = ""  # no fixed prefix — filter via regex
+            self.product_url_regex = r"/m\d{5,}"
+            self.selectors = _MAGENTO_SELECTORS
         else:
             self.product_url_pattern = "/product/"
             self.selectors = _WOO_SELECTORS
+
+        if not hasattr(self, "product_url_regex"):
+            self.product_url_regex = ""
 
 
 def load_stores(config_path: Path | None = None) -> list[StoreConfig]:
