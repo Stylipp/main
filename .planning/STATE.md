@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 5 complete — Feed Generation & Ranking (3/3 plans complete)
+**Current focus:** Phase 16 complete — Automated Product Scraping & Sync (6/6 plans complete)
 
 ## Current Position
 
-Phase: 5 of 15 (Feed Generation & Ranking)
-Plan: 3 of 3 in current phase
+Phase: 16 of 16 (Automated Product Scraping & Sync)
+Plan: 6 of 6 in current phase
 Status: Phase complete
-Last activity: 2026-03-17 — Completed 05-03-PLAN.md
+Last activity: 2026-03-18 — Completed 16-06-PLAN.md (parallel execution, 4 waves)
 
-Progress: ███████████████ Phase 1 ✓ | Phase 2 ✓ | Phase 3 ✓ | Phase 4 ✓ | Phase 5 ✓
+Progress: ███████████████ Phase 1-5 ✓ | Phase 16 ✓ (Phases 6-15 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
+- Total plans completed: 32
 - Average duration: ~9 min
-- Total execution time: ~4h 0m
+- Total execution time: ~4h 56m
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: ███████████████ Phase 1 ✓ | Phase 2 �
 | 3 | 3/3 ✓ | 14m | ~5m |
 | 4 | 5/5 ✓ | ~33m | ~7m |
 | 5 | 3/3 ✓ | 32m | ~11m |
+| 16 | 6/6 ✓ | ~56m | ~9m |
 
 **Recent Trend:**
-- Last 5 plans: 04-05, 05-01, 05-02, 05-03
-- Trend: Steady
+- Last 5 plans: 16-02, 16-03, 16-04, 16-05, 16-06
+- Trend: Steady (parallel execution for Phase 16)
 
 ## Accumulated Context
 
@@ -88,6 +89,13 @@ Progress: ███████████████ Phase 1 ✓ | Phase 2 �
 | 05-03 | Explanation template selection: price > cluster_prior > default | Simple non-cosine factor dominance for 3 templates |
 | 05-03 | Product enrichment via external_id lookup | Qdrant stores external_id as product_id; join to Product model |
 | 05-03 | batch_id informational only (no Redis) | Redis-backed batch caching deferred to Phase 12 |
+| 16-01 | YAML-based store config with CSS selectors | Configurable per-store scraping without code changes |
+| 16-01 | SQLite for change detection state | Lightweight, no Docker dependency, local persistence |
+| 16-02 | JSON-LD extraction first, HTML selectors fallback | Ported from The Sprapper; structured data preferred when available |
+| 16-03 | SHA-256 content hash excluding volatile fields | Deterministic: same product data → same hash regardless of scrape time |
+| 16-04 | Removed products logged but not deleted from PostgreSQL | Preserves user interaction history; archival is future concern |
+| 16-05 | Reuse existing EmbeddingService/QualityGateService | No new model instances; consistent with ingestion pipeline |
+| 16-06 | Per-site parallelism via asyncio.gather | Rate limiting requires sequential within site; parallel across sites |
 
 ### Deferred Issues
 
@@ -97,6 +105,10 @@ None yet.
 
 None yet.
 
+### Roadmap Evolution
+
+- Phase 16 added (2026-03-18): Automated Product Scraping & Sync — nightly multi-site scraper replacing manual `apps/The Sprapper/` workflow
+
 ### Blockers/Concerns
 
 - ~~uuid-ossp extension not yet created~~ — Resolved in 02-01 migration
@@ -105,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Completed 05-03-PLAN.md (Feed API endpoint with cursor pagination, schemas, explanation templates — Phase 5 complete)
+Last session: 2026-03-18
+Stopped at: Completed Phase 16 (Automated Product Scraping & Sync — 6 plans via parallel execution in 4 waves, ~56 min)
 Resume file: None

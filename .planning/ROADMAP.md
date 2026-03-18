@@ -2,7 +2,7 @@
 
 ## Overview
 
-A 15-phase journey from zero to MVP launch, building an AI-powered fashion discovery PWA that delivers personalized clothing recommendations from the first session. The roadmap progresses from foundational infrastructure through ML clustering and cold-start systems, to a production-ready swipe-based discovery interface with affiliate tracking and analytics. Each phase delivers a coherent, verifiable capability on the path to a 6-week soft launch with 50-100 users.
+A 16-phase journey from zero to MVP launch, building an AI-powered fashion discovery PWA that delivers personalized clothing recommendations from the first session. The roadmap progresses from foundational infrastructure through ML clustering and cold-start systems, to a production-ready swipe-based discovery interface with affiliate tracking and analytics. Each phase delivers a coherent, verifiable capability on the path to a 6-week soft launch with 50-100 users.
 
 ## Domain Expertise
 
@@ -31,6 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 13: PWA Implementation** - Service worker, offline capability, installability (iOS/Android)
 - [ ] **Phase 14: Polish & Quality Assurance** - Explainability templates, UX refinements, load testing, edge cases
 - [ ] **Phase 15: Launch Readiness** - Monitoring dashboards, alerts, launch checklist, soft launch prep
+- [x] **Phase 16: Automated Product Scraping & Sync** - Nightly multi-site scraper, SQLite change detection, WooCommerce + DB + Qdrant sync, async parallel per-site execution
 
 ## Phase Details
 
@@ -236,10 +237,29 @@ Plans:
 Plans:
 - TBD during planning
 
+### Phase 16: Automated Product Scraping & Sync
+**Goal**: Build automated nightly scraping pipeline that crawls configured fashion store sitemaps, detects product changes via SQLite hash comparison, syncs updates to WooCommerce dummy store and main PostgreSQL/Qdrant databases, and re-clusters updated products. Runs async with parallel per-site execution. Replaces the current manual scraping workflow in `apps/The Sprapper/`.
+
+**Depends on**: Phase 15
+
+**Research**: Likely (sitemap parsing strategies, rate limiting per domain, WooCommerce REST API bulk operations)
+
+**Research topics**: Sitemap XML parsing and product URL extraction patterns, async HTTP scraping with rate limiting (per-domain politeness), SQLite content hashing for efficient change detection, WooCommerce REST API bulk create/update endpoints, Qdrant point update and re-clustering strategies
+
+**Plans**: Defined (6 plans, executed via parallel phase execution)
+
+Plans:
+- [x] 16-01: Scraper feature module structure, schemas, YAML store config
+- [x] 16-02: Async sitemap fetcher and product page scraper (JSON-LD + HTML)
+- [x] 16-03: SQLite-based change detection engine (content hashing, diff)
+- [x] 16-04: WooCommerce batch operations and PostgreSQL sync service
+- [x] 16-05: Qdrant vector sync with batch embedding and re-clustering trigger
+- [x] 16-06: Scraper orchestrator and CLI entry point (run_scraper.py)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -258,3 +278,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 13. PWA Implementation | 0/TBD | Not started | - |
 | 14. Polish & Quality Assurance | 0/TBD | Not started | - |
 | 15. Launch Readiness | 0/TBD | Not started | - |
+| 16. Automated Product Scraping & Sync | 6/6 | Complete | 2026-03-18 |
