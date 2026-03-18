@@ -73,11 +73,11 @@ class StoreConfig(BaseModel):
         domain = parsed.hostname or self.base_url
 
         if not self.id:
-            # mekimi.co.il -> mekimi
-            self.id = domain.split(".")[0]
+            # Strip www., then take first part: www.shoofra.co.il -> shoofra
+            clean = domain.removeprefix("www.")
+            self.id = clean.split(".")[0]
 
         if not self.name:
-            # mekimi -> Mekimi
             self.name = self.id.capitalize()
 
     @classmethod
