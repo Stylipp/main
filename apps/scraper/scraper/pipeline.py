@@ -1,4 +1,4 @@
-"""Orchestrate: scrape → diff → push to WooCommerce."""
+"""Orchestrate: scrape → diff → push to backend."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from .config import StoreConfig, load_stores
 from .product_scraper import scrape_batch
 from .schemas import ScrapedProduct
 from .sitemap import fetch_product_urls
-from .woo_sync import WooSync
+from .backend_sync import BackendSync
 from . import telegram
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 async def run_store(
     store: StoreConfig,
-    woo: WooSync,
+    sync: BackendSync,
     detector: ChangeDetector,
     *,
     dry_run: bool = False,
@@ -58,9 +58,9 @@ async def run_store(
             return stats
 
         if report.new:
-            await woo.push_products(report.new)
+            await sync.push_products(report.new)
         if report.changed:
-            await woo.update_products(report.changed)
+            await sync.update_products(report.changed)
 
         # Update hashes after successful sync
         all_synced = report.new + report.changed
@@ -93,12 +93,12 @@ async def run_all(
 
     logger.info("Starting scraper for %d stores", len(stores))
 
-    woo = WooSync()
+    sync = BackendSync()
     detector = ChangeDetector()
     await detector.initialize()
 
     results = await asyncio.gather(
-        *[run_store(s, woo, detector, dry_run=dry_run) for s in stores],
+        *[run_store(s, sync, detector, dry_run=dry_run) for s in stores],
         return_exceptions=True,
     )
 

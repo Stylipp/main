@@ -23,6 +23,7 @@ from qdrant_client.models import PointStruct
 if TYPE_CHECKING:
     from qdrant_client import AsyncQdrantClient
 
+    from ....models.product import Product
     from ...ai.service.embedding_service import EmbeddingService
     from ...ai.service.quality_gate import QualityGateService
     from ..schemas.schemas import ProductCreate
@@ -40,12 +41,14 @@ class IngestionResult:
         product_id: The UUID of the created product (if successful).
         error: Human-readable error message (if failed).
         quality_issues: List of quality issue codes (if quality check failed).
+        updated: Whether this was an update of an existing product (vs new creation).
     """
 
     success: bool
     product_id: UUID | None = None
     error: str | None = None
     quality_issues: list[str] = field(default_factory=list)
+    updated: bool = False
 
 
 class IngestionService:
@@ -143,6 +146,155 @@ class IngestionService:
         )
 
         return IngestionResult(success=True, product_id=product.id)
+
+    async def ingest_or_update_product(
+        self, product_data: ProductCreate
+    ) -> IngestionResult:
+        """Ingest a new product or update an existing one.
+
+        Looks up the product by external_id + store_id. If it doesn't exist,
+        runs the full ingestion pipeline. If it does exist, updates metadata
+        and re-embeds only when the image URL has changed.
+
+        Args:
+            product_data: Product data from the scraper.
+
+        Returns:
+            IngestionResult with success status, product ID, and updated flag.
+        """
+        existing = await self.repository.get_by_external_id(
+            product_data.external_id, product_data.store_id
+        )
+        if existing is None:
+            return await self._ingest_new(product_data)
+        return await self._update_existing(existing, product_data)
+
+    async def _ingest_new(self, product_data: ProductCreate) -> IngestionResult:
+        """Run the full ingestion pipeline for a new product (no duplicate check).
+
+        Args:
+            product_data: Product data to ingest.
+
+        Returns:
+            IngestionResult with success status and product ID or error details.
+        """
+        # 1. Fetch image
+        try:
+            image, file_size = await self._fetch_image(product_data.image_url)
+        except Exception as e:
+            logger.warning("Failed to fetch image %s: %s", product_data.image_url, e)
+            return IngestionResult(success=False, error=f"Image fetch failed: {e!s}")
+
+        # 2. Validate quality
+        quality_result = self.quality_gate.validate_image(image, file_size)
+        if not quality_result.passed:
+            return IngestionResult(
+                success=False,
+                error="Quality check failed",
+                quality_issues=[issue.value for issue in quality_result.issues],
+            )
+
+        # 3. Generate embedding
+        try:
+            embedding = await self.embedding_service.get_embedding(image)
+        except Exception as e:
+            logger.error("Embedding generation failed: %s", e)
+            return IngestionResult(success=False, error=f"Embedding failed: {e!s}")
+
+        # 4. Store in PostgreSQL
+        product = await self.repository.create(product_data)
+
+        # 5. Store embedding in Qdrant
+        await self.qdrant.upsert(
+            collection_name=self.collection_name,
+            points=[
+                PointStruct(
+                    id=str(product.id),
+                    vector=embedding,
+                    payload={
+                        "product_id": str(product.id),
+                        "store_id": product.store_id,
+                        "price": float(product.price),
+                        "created_at": product.created_at.isoformat(),
+                    },
+                )
+            ],
+        )
+
+        return IngestionResult(success=True, product_id=product.id)
+
+    async def _update_existing(
+        self, existing: Product, product_data: ProductCreate
+    ) -> IngestionResult:
+        """Update an existing product's metadata, re-embedding if image changed.
+
+        Args:
+            existing: The existing Product record from the database.
+            product_data: New product data from the scraper.
+
+        Returns:
+            IngestionResult with success status and updated flag set to True.
+        """
+        image_changed = existing.image_url != product_data.image_url
+
+        # 1. Update metadata in PostgreSQL
+        update_fields = {
+            "title": product_data.title,
+            "description": product_data.description,
+            "price": product_data.price,
+            "currency": product_data.currency,
+            "image_url": product_data.image_url,
+            "product_url": product_data.product_url,
+        }
+        await self.repository.update(
+            product_data.external_id, product_data.store_id, update_fields
+        )
+
+        # 2. If image changed, re-fetch, validate, embed, and update Qdrant
+        if image_changed:
+            try:
+                image, file_size = await self._fetch_image(product_data.image_url)
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch updated image %s: %s",
+                    product_data.image_url,
+                    e,
+                )
+                return IngestionResult(
+                    success=False, error=f"Image fetch failed: {e!s}"
+                )
+
+            quality_result = self.quality_gate.validate_image(image, file_size)
+            if not quality_result.passed:
+                return IngestionResult(
+                    success=False,
+                    error="Quality check failed",
+                    quality_issues=[issue.value for issue in quality_result.issues],
+                )
+
+            try:
+                embedding = await self.embedding_service.get_embedding(image)
+            except Exception as e:
+                logger.error("Embedding generation failed on update: %s", e)
+                return IngestionResult(success=False, error=f"Embedding failed: {e!s}")
+
+            await self.qdrant.upsert(
+                collection_name=self.collection_name,
+                points=[
+                    PointStruct(
+                        id=str(existing.id),
+                        vector=embedding,
+                        payload={
+                            "product_id": str(existing.id),
+                            "store_id": existing.store_id,
+                            "price": float(product_data.price),
+                            "created_at": existing.created_at.isoformat(),
+                        },
+                    )
+                ],
+            )
+
+        return IngestionResult(success=True, product_id=existing.id, updated=True)
 
     async def _fetch_image(self, url: str) -> tuple[Image.Image, int]:
         """Fetch image from URL, return PIL Image and file size in bytes.

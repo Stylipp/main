@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Product scraper — scrape fashion stores and push to WooCommerce.
+Product scraper — scrape fashion stores and push to backend.
 
 Usage:
     python run.py                    # scrape all stores
@@ -15,14 +15,14 @@ import logging
 import sys
 
 from scraper.config import load_stores
-from scraper.pipeline import run_all, run_store, ChangeDetector, WooSync
+from scraper.pipeline import run_all, run_store, ChangeDetector, BackendSync
 from scraper import telegram
 
 
 def main():
     parser = argparse.ArgumentParser(description="Scrape fashion stores")
     parser.add_argument("--store", help="Run specific store by ID")
-    parser.add_argument("--dry-run", action="store_true", help="Scrape + diff only, no WooCommerce sync")
+    parser.add_argument("--dry-run", action="store_true", help="Scrape + diff only, no sync")
     parser.add_argument("--list", action="store_true", help="List configured stores")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
@@ -70,7 +70,7 @@ def main():
         )
 
     if args.dry_run:
-        print("\n[DRY RUN] No changes synced to WooCommerce")
+        print("\n[DRY RUN] No changes synced")
 
     # Send Telegram notification
     telegram.send_summary(results, dry_run=args.dry_run)

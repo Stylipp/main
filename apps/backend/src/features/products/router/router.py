@@ -1,9 +1,10 @@
 """Products feature router with ingestion and query endpoints.
 
 Endpoints:
-    GET  /api/products/health  - Health check for products feature
-    GET  /api/products/count   - Get total product count from PostgreSQL
-    POST /api/products/ingest  - Ingest a single product (testing/manual)
+    GET  /api/products/health       - Health check for products feature
+    GET  /api/products/count        - Get total product count from PostgreSQL
+    POST /api/products/ingest       - Ingest a single product (testing/manual)
+    POST /api/products/ingest/batch - Batch ingest/upsert products from scraper
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from ....core.database import get_db
 from ....core.qdrant import get_qdrant_client
 from ....models.product import Product
 from ...ai.service.quality_gate import QualityGateService
-from ..schemas.schemas import ProductCreate
+from ..schemas.schemas import BatchIngestRequest, BatchIngestResponse, ProductCreate
 from ..service.ingestion_service import IngestionService
 from ..service.product_repository import ProductRepository
 
@@ -127,3 +128,70 @@ async def ingest_single_product(
         "success": True,
         "product_id": str(result.product_id),
     }
+
+
+@router.post("/ingest/batch")
+async def ingest_batch(
+    request_body: BatchIngestRequest,
+    service: Annotated[IngestionService, Depends(get_ingestion_service)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> BatchIngestResponse:
+    """Batch ingest/upsert products from the scraper.
+
+    Processes products sequentially. Each product is either created or updated.
+    Individual product failures are captured in the errors list without aborting
+    the batch. All successful changes are committed once at the end.
+
+    Args:
+        request_body: Batch of products to ingest.
+        service: IngestionService with all dependencies.
+        session: Async SQLAlchemy session for final commit.
+
+    Returns:
+        BatchIngestResponse with counts and per-product error details.
+    """
+    stats: dict = {
+        "total": len(request_body.products),
+        "created": 0,
+        "updated": 0,
+        "failed": 0,
+        "errors": [],
+    }
+
+    for product in request_body.products:
+        try:
+            result = await service.ingest_or_update_product(product)
+        except Exception as e:
+            logger.error(
+                "Unexpected error ingesting %s/%s: %s",
+                product.store_id,
+                product.external_id,
+                e,
+            )
+            stats["failed"] += 1
+            stats["errors"].append(
+                {
+                    "external_id": product.external_id,
+                    "store_id": product.store_id,
+                    "error": f"Unexpected error: {e!s}",
+                }
+            )
+            continue
+
+        if result.success:
+            if result.updated:
+                stats["updated"] += 1
+            else:
+                stats["created"] += 1
+        else:
+            stats["failed"] += 1
+            stats["errors"].append(
+                {
+                    "external_id": product.external_id,
+                    "store_id": product.store_id,
+                    "error": result.error,
+                }
+            )
+
+    await session.commit()
+    return BatchIngestResponse(**stats)

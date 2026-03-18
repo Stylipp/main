@@ -148,14 +148,16 @@ services:
       context: ..
       dockerfile: apps/scraper/Dockerfile
     environment:
-      - WOO_STORE_URL=${WOO_STORE_URL}
-      - WOO_CONSUMER_KEY=${WOO_CONSUMER_KEY}
-      - WOO_CONSUMER_SECRET=${WOO_CONSUMER_SECRET}
+      - BACKEND_API_URL=http://stylipp-backend:8000
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - scraper_data:/app/data
-    network_mode: bridge
+    networks:
+      - internal_network
+      - web
+    depends_on:
+      stylipp-backend: { condition: service_started }
     profiles:
       - scraper
 

@@ -42,3 +42,19 @@ class ProductSyncStatus(BaseModel):
     total_valid: int
     total_rejected: int
     rejection_reasons: dict[str, int] = Field(default_factory=dict)
+
+
+class BatchIngestRequest(BaseModel):
+    """Request body for batch product ingestion."""
+
+    products: list[ProductCreate]
+
+
+class BatchIngestResponse(BaseModel):
+    """Response from a batch product ingestion."""
+
+    total: int
+    created: int
+    updated: int
+    failed: int
+    errors: list[dict] = Field(default_factory=list)
