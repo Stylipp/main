@@ -16,6 +16,7 @@ import sys
 
 from scraper.config import load_stores
 from scraper.pipeline import run_all, run_store, ChangeDetector, WooSync
+from scraper import telegram
 
 
 def main():
@@ -70,6 +71,9 @@ def main():
 
     if args.dry_run:
         print("\n[DRY RUN] No changes synced to WooCommerce")
+
+    # Send Telegram notification
+    telegram.send_summary(results, dry_run=args.dry_run)
 
     sys.exit(1 if has_errors else 0)
 

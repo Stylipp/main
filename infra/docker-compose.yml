@@ -151,6 +151,8 @@ services:
       - WOO_STORE_URL=${WOO_STORE_URL}
       - WOO_CONSUMER_KEY=${WOO_CONSUMER_KEY}
       - WOO_CONSUMER_SECRET=${WOO_CONSUMER_SECRET}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - scraper_data:/app/data
     network_mode: bridge
