@@ -14,6 +14,7 @@ env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/stylipp/stylipp-backend
   WEB_IMAGE: ghcr.io/stylipp/stylipp-web
+  SCRAPER_IMAGE: ghcr.io/stylipp/stylipp-scraper
 
 jobs:
   frontend-lint:
@@ -121,10 +122,35 @@ jobs:
             VITE_API_URL=https://api.stylipp.com
 
 
+  build-scraper:
+    name: Build & Push Scraper Image
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/scraper/Dockerfile
+          push: true
+          tags: |
+            ${{ env.SCRAPER_IMAGE }}:latest
+            ${{ env.SCRAPER_IMAGE }}:${{ github.sha }}
+
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
-    needs: [build-backend, build-web]
+    needs: [build-backend, build-web, build-scraper]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -162,6 +188,8 @@ jobs:
             WOO_STORE_URL=${{ secrets.WOO_STORE_URL }}
             WOO_CONSUMER_KEY=${{ secrets.WOO_CONSUMER_KEY }}
             WOO_CONSUMER_SECRET=${{ secrets.WOO_CONSUMER_SECRET }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
             GITHUB_REPOSITORY_OWNER=stylipp
             TAG=latest
             ENVIRONMENT=production
@@ -172,5 +200,6 @@ jobs:
 
             # Pull new images and restart
             docker compose -f infra/docker-compose.yml pull stylipp-backend stylipp-web
+            docker compose -f infra/docker-compose.yml --profile scraper pull scraper
             docker compose -f infra/docker-compose.yml up -d
             docker image prune -f

@@ -31,14 +31,36 @@ def _api(method: str, **kwargs) -> dict | None:
 def send(text: str) -> bool:
     """Send a message to the configured chat. Returns True on success."""
     if not _TOKEN or not _CHAT_ID:
-        logger.debug("Telegram not configured — skipping notification")
         return False
     result = _api("sendMessage", chat_id=_CHAT_ID, text=text, parse_mode="HTML")
     return bool(result and result.get("ok"))
 
 
+def notify_store_start(store_name: str, store_id: str) -> bool:
+    """Notify that a store scrape has started."""
+    return send(f"🔄 <b>{store_name}</b> ({store_id}) — scraping started...")
+
+
+def notify_store_done(stats: dict) -> bool:
+    """Notify that a store scrape has finished."""
+    name = stats.get("store", "?")
+    err = stats.get("error")
+    if err:
+        return send(f"❌ <b>{name}</b> — failed: {err[:200]}")
+
+    urls = stats.get("urls", 0)
+    new = stats.get("new", 0)
+    chg = stats.get("changed", 0)
+    rem = stats.get("removed", 0)
+    dur = stats.get("duration", "?")
+    return send(
+        f"✅ <b>{name}</b> — done in {dur}s\n"
+        f"   📦 {urls} products | 🆕 {new} new | ✏️ {chg} changed | 🗑 {rem} removed"
+    )
+
+
 def send_summary(results: list[dict], dry_run: bool = False) -> bool:
-    """Format and send scraper results summary."""
+    """Format and send final scraper summary."""
     if not _TOKEN or not _CHAT_ID:
         return False
 
@@ -51,24 +73,22 @@ def send_summary(results: list[dict], dry_run: bool = False) -> bool:
     mode = "🧪 DRY RUN" if dry_run else "🚀 LIVE"
     status = "❌" if errors else "✅"
 
-    lines = [f"{status} <b>Scraper {mode}</b> — {len(results)} stores"]
+    lines = [f"{status} <b>Scraper {mode} Complete</b> — {len(results)} stores"]
     lines.append("")
 
     for r in results:
         name = r.get("store", "?")
         err = r.get("error")
         if err:
-            lines.append(f"  ❌ <b>{name}</b>: {err[:80]}")
+            lines.append(f"  ❌ {name}")
         else:
             urls = r.get("urls", 0)
             new = r.get("new", 0)
             chg = r.get("changed", 0)
-            rem = r.get("removed", 0)
-            dur = r.get("duration", "?")
-            lines.append(f"  ✅ <b>{name}</b>: {urls} urls, {new} new, {chg} chg, {rem} rem ({dur}s)")
+            lines.append(f"  ✅ {name}: {urls} urls, {new} new, {chg} chg")
 
     lines.append("")
-    lines.append(f"📊 Total: {total_urls} urls, {total_new} new, {total_changed} chg, {total_removed} rem")
+    lines.append(f"📊 <b>Total: {total_urls} products, {total_new} new, {total_changed} changed, {total_removed} removed</b>")
     if errors:
         lines.append(f"⚠️ {len(errors)} store(s) failed")
 

@@ -12,6 +12,7 @@ from .product_scraper import scrape_batch
 from .schemas import ScrapedProduct
 from .sitemap import fetch_product_urls
 from .woo_sync import WooSync
+from . import telegram
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +28,14 @@ async def run_store(
     start = time.monotonic()
     stats = {"store": store.name, "urls": 0, "scraped": 0, "new": 0, "changed": 0, "removed": 0, "error": None}
 
+    telegram.notify_store_start(store.name, store.id)
+
     try:
         urls = await fetch_product_urls(store)
         stats["urls"] = len(urls)
         if not urls:
+            stats["duration"] = round(time.monotonic() - start, 1)
+            telegram.notify_store_done(stats)
             return stats
 
         products = await scrape_batch(urls, store)
@@ -48,6 +53,8 @@ async def run_store(
 
         if dry_run:
             logger.info("[DRY RUN] Would sync %d new, %d changed for %s", stats["new"], stats["changed"], store.name)
+            stats["duration"] = round(time.monotonic() - start, 1)
+            telegram.notify_store_done(stats)
             return stats
 
         if report.new:
@@ -67,6 +74,7 @@ async def run_store(
         logger.error("Pipeline failed for %s: %s", store.name, e, exc_info=True)
 
     stats["duration"] = round(time.monotonic() - start, 1)
+    telegram.notify_store_done(stats)
     return stats
 
 
