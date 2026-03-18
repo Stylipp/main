@@ -138,6 +138,26 @@ services:
       - "traefik.http.services.stylipp-web.loadbalancer.server.port=80"
       - "traefik.docker.network=web"
 
+  ###################################################
+  # Scraper (on-demand — run with: docker compose run --rm scraper)
+  ###################################################
+  scraper:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-stylipp}/stylipp-scraper:${TAG:-latest}
+    container_name: stylipp_scraper
+    build:
+      context: ..
+      dockerfile: apps/scraper/Dockerfile
+    environment:
+      - WOO_STORE_URL=${WOO_STORE_URL}
+      - WOO_CONSUMER_KEY=${WOO_CONSUMER_KEY}
+      - WOO_CONSUMER_SECRET=${WOO_CONSUMER_SECRET}
+    volumes:
+      - scraper_data:/app/data
+    networks:
+      - internal_network
+    profiles:
+      - scraper
+
 ###################################################
 # Networks and Volumes
 ###################################################
@@ -153,3 +173,4 @@ volumes:
   qdrant_data:
   redis_data:
   hf_cache:  # Hugging Face model cache (FashionSigLIP ~600MB)
+  scraper_data:  # SQLite state for change detection between runs
