@@ -74,13 +74,14 @@ class StoreConfig:
         self.name = self.id.capitalize()
         self.sitemap_url: str = ""  # auto-discovered
         self.currency = "ILS"
-        self.rate_limit_seconds = 0.5
+        self.rate_limit_seconds = 1.0
         self.timeout_seconds = 30.0
         self.platform = platform or _detect_platform(parsed.hostname or "")
 
         if self.platform == "shopify":
             self.product_url_pattern = "/products/"
             self.selectors = _SHOPIFY_SELECTORS
+            self.rate_limit_seconds = 2.0  # Shopify/Cloudflare needs slower rate
         elif self.platform == "magento":
             self.product_url_pattern = ""  # no fixed prefix — filter via regex
             self.product_url_regex = r"/m\d{5,}"

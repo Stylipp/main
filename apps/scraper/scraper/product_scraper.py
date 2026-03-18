@@ -26,12 +26,25 @@ _HEADERS = {
 }
 
 
+async def _fetch_with_retry(url: str, store: StoreConfig, max_retries: int = 3) -> httpx.Response:
+    """Fetch URL with exponential backoff on 429 responses."""
+    for attempt in range(max_retries + 1):
+        async with httpx.AsyncClient(timeout=store.timeout_seconds) as client:
+            r = await client.get(url, headers=_HEADERS, follow_redirects=True)
+            if r.status_code == 429 and attempt < max_retries:
+                wait = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                logger.info("429 rate limited on %s — waiting %ds (retry %d/%d)", url, wait, attempt + 1, max_retries)
+                await asyncio.sleep(wait)
+                continue
+            r.raise_for_status()
+            return r
+    return r  # unreachable, but keeps type checker happy
+
+
 async def scrape_product(url: str, store: StoreConfig) -> ScrapedProduct | None:
     """Scrape one product page. Returns None on failure."""
     try:
-        async with httpx.AsyncClient(timeout=store.timeout_seconds) as client:
-            r = await client.get(url, headers=_HEADERS, follow_redirects=True)
-            r.raise_for_status()
+        r = await _fetch_with_retry(url, store)
 
         soup = BeautifulSoup(r.text, "html.parser")
 
