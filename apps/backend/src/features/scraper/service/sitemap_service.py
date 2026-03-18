@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 
 import httpx
 
-from src.features.scraper.config.stores import StoreConfig
+from src.features.scraper.config.stores import SITEMAP_CANDIDATES, StoreConfig
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +25,40 @@ class SitemapService:
     def __init__(self, timeout: float = 30.0) -> None:
         self.timeout = timeout
 
+    async def discover_sitemap_url(self, base_url: str) -> str | None:
+        """Try common sitemap paths and return the first one that works."""
+        for candidate in SITEMAP_CANDIDATES:
+            url = f"{base_url.rstrip('/')}{candidate}"
+            xml_text = await self._fetch_xml(url)
+            if xml_text is not None:
+                logger.info("Discovered sitemap: %s", url)
+                return url
+        logger.warning("No sitemap found for %s", base_url)
+        return None
+
     async def fetch_product_urls(self, store: StoreConfig) -> list[str]:
         """Fetch sitemap XML and extract product URLs for a store.
 
-        1. Fetches the sitemap from store.sitemap_url.
-        2. If the response is a sitemap index, recursively fetches sub-sitemaps.
-        3. Filters URLs to those matching store.product_url_pattern.
-        4. Returns a sorted, deduplicated list.
+        1. If store.sitemap_url is empty, auto-discovers by trying common paths.
+        2. Fetches the sitemap XML.
+        3. If the response is a sitemap index, recursively fetches sub-sitemaps.
+        4. Filters URLs to those matching store.product_url_pattern.
+        5. Returns a sorted, deduplicated list.
 
         On any network or parse error, logs a warning and returns an empty list
         so the pipeline can continue with other stores.
         """
         try:
-            xml_text = await self._fetch_xml(store.sitemap_url)
+            # Auto-discover sitemap if not configured
+            sitemap_url = store.sitemap_url
+            if not sitemap_url:
+                sitemap_url = await self.discover_sitemap_url(store.base_url)
+                if not sitemap_url:
+                    return []
+                # Cache the discovered URL on the store config
+                store.sitemap_url = sitemap_url
+
+            xml_text = await self._fetch_xml(sitemap_url)
             if xml_text is None:
                 return []
 
