@@ -37,10 +37,6 @@ class Settings(BaseSettings):
     woo_consumer_key: str | None = None
     woo_consumer_secret: str | None = None
 
-    # Scraper settings
-    scraper_sqlite_path: str = "data/scraper_state.db"
-    scraper_recluster_threshold: float = 0.05
-
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 
