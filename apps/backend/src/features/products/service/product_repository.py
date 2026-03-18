@@ -66,6 +66,28 @@ class ProductRepository:
         )
         return result.scalar_one_or_none()
 
+    async def update(
+        self, external_id: str, store_id: str, data: dict
+    ) -> Product | None:
+        """Update an existing product by external_id and store_id.
+
+        Args:
+            external_id: The product's external identifier.
+            store_id: The store the product belongs to.
+            data: Dict of fields to update (title, price, image_url, etc.)
+
+        Returns:
+            Updated Product or None if not found.
+        """
+        product = await self.get_by_external_id(external_id, store_id)
+        if product is None:
+            return None
+        for key, value in data.items():
+            if hasattr(product, key):
+                setattr(product, key, value)
+        await self.session.flush()
+        return product
+
     async def exists(self, external_id: str, store_id: str) -> bool:
         """Check if a product exists (faster than full get).
 
