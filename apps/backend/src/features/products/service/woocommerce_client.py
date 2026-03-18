@@ -1,6 +1,10 @@
-import httpx
+import logging
 from dataclasses import dataclass, field
 from typing import AsyncIterator
+
+import httpx
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -121,3 +125,137 @@ class WooCommerceClient:
                 return response.status_code == 200
         except Exception:
             return False
+
+    # --- Batch operations (Phase 16) ---
+
+    _BATCH_CHUNK_SIZE = 100
+
+    async def batch_create_products(self, products: list[dict]) -> list[dict]:
+        """Batch-create products via WooCommerce REST API v3.
+
+        Sends products in chunks of 100 (WooCommerce batch limit).
+        On failure, logs the error and returns partial results — never
+        crashes the pipeline since WooCommerce is secondary to
+        PostgreSQL + Qdrant.
+
+        Args:
+            products: List of product dicts, each with keys like
+                name, regular_price, description, images, status.
+
+        Returns:
+            List of created product dicts from the WooCommerce response.
+        """
+        all_created: list[dict] = []
+
+        for i in range(0, len(products), self._BATCH_CHUNK_SIZE):
+            chunk = products[i : i + self._BATCH_CHUNK_SIZE]
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        f"{self.api_url}/products/batch",
+                        auth=self._auth,
+                        json={"create": chunk},
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    created = data.get("create", [])
+                    all_created.extend(created)
+            except httpx.HTTPStatusError as exc:
+                logger.error(
+                    "WooCommerce batch create failed (status %s): %s",
+                    exc.response.status_code,
+                    exc.response.text,
+                )
+            except httpx.TimeoutException:
+                logger.warning(
+                    "WooCommerce batch create timed out for chunk %d–%d, "
+                    "returning partial results",
+                    i,
+                    i + len(chunk),
+                )
+                break
+            except Exception:
+                logger.exception("Unexpected error during WooCommerce batch create")
+
+        logger.info("%d products created in WooCommerce", len(all_created))
+        return all_created
+
+    async def batch_update_products(self, products: list[dict]) -> list[dict]:
+        """Batch-update products via WooCommerce REST API v3.
+
+        Each product dict must include ``id`` (WooCommerce product ID)
+        plus the fields to change.  Processes in chunks of 100.
+
+        Args:
+            products: List of product dicts with ``id`` and changed fields.
+
+        Returns:
+            List of updated product dicts from the WooCommerce response.
+        """
+        all_updated: list[dict] = []
+
+        for i in range(0, len(products), self._BATCH_CHUNK_SIZE):
+            chunk = products[i : i + self._BATCH_CHUNK_SIZE]
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        f"{self.api_url}/products/batch",
+                        auth=self._auth,
+                        json={"update": chunk},
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    updated = data.get("update", [])
+                    all_updated.extend(updated)
+            except httpx.HTTPStatusError as exc:
+                logger.error(
+                    "WooCommerce batch update failed (status %s): %s",
+                    exc.response.status_code,
+                    exc.response.text,
+                )
+            except httpx.TimeoutException:
+                logger.warning(
+                    "WooCommerce batch update timed out for chunk %d–%d, "
+                    "returning partial results",
+                    i,
+                    i + len(chunk),
+                )
+                break
+            except Exception:
+                logger.exception("Unexpected error during WooCommerce batch update")
+
+        logger.info("%d products updated in WooCommerce", len(all_updated))
+        return all_updated
+
+    async def find_product_by_sku(self, sku: str) -> dict | None:
+        """Look up a WooCommerce product by SKU.
+
+        Used to find the WooCommerce product ID when we need to update
+        an existing product.
+
+        Args:
+            sku: The product SKU to search for.
+
+        Returns:
+            The product dict if found, or None.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.api_url}/products",
+                    auth=self._auth,
+                    params={"sku": sku, "per_page": 1},
+                )
+                response.raise_for_status()
+                results = response.json()
+                return results[0] if results else None
+        except httpx.HTTPStatusError as exc:
+            logger.error(
+                "WooCommerce find_product_by_sku failed (status %s): %s",
+                exc.response.status_code,
+                exc.response.text,
+            )
+            return None
+        except Exception:
+            logger.exception("Unexpected error during WooCommerce find_product_by_sku")
+            return None
