@@ -97,7 +97,10 @@ class StoreConfig:
 def load_stores(config_path: Path | None = None) -> list[StoreConfig]:
     """Load stores from YAML. Each entry is a URL or {url, platform}."""
     if config_path is None:
-        config_path = Path(__file__).parent.parent / "stores.yaml"
+        # Prefer data volume path (writable by bot), fall back to bundled
+        data_path = Path("/app/data/stores.yaml")
+        bundled_path = Path(__file__).parent.parent / "stores.yaml"
+        config_path = data_path if data_path.exists() else bundled_path
 
     with open(config_path) as f:
         data = yaml.safe_load(f)

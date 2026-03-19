@@ -7,6 +7,7 @@ Usage:
     python run.py --dry-run          # scrape + diff only, no sync
     python run.py --store mekimi     # specific store
     python run.py --list             # show configured stores
+    python run.py --bot              # run as interactive Telegram bot
 """
 
 import argparse
@@ -24,6 +25,7 @@ def main():
     parser.add_argument("--store", help="Run specific store by ID")
     parser.add_argument("--dry-run", action="store_true", help="Scrape + diff only, no sync")
     parser.add_argument("--list", action="store_true", help="List configured stores")
+    parser.add_argument("--bot", action="store_true", help="Run as interactive Telegram bot")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -32,6 +34,11 @@ def main():
         format="%(asctime)s %(levelname)-8s %(message)s",
         datefmt="%H:%M:%S",
     )
+
+    if args.bot:
+        from scraper.bot import run_bot
+        asyncio.run(run_bot())
+        return
 
     stores = load_stores()
 
