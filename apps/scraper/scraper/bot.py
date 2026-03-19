@@ -37,6 +37,23 @@ def _ensure_stores_file():
             STORES_PATH.write_text("stores:\n")
 
 
+async def _detect_platform(url: str) -> str:
+    """Auto-detect platform by checking homepage HTML for indicators."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0.0.0",
+            }, follow_redirects=True)
+            html = r.text.lower()
+            if "shopify" in html or "myshopify.com" in html:
+                return "shopify"
+            if "magento" in html or "mage-" in html:
+                return "magento"
+    except Exception:
+        pass
+    return ""  # default (woocommerce)
+
+
 async def _send(text: str, parse_mode: str = "HTML") -> None:
     """Send message to configured chat."""
     try:
@@ -111,6 +128,10 @@ async def cmd_add(args: str, **_):
     if not url.startswith("http"):
         url = f"https://{url}"
 
+    # Auto-detect platform if not specified
+    if not platform:
+        platform = await _detect_platform(url)
+
     # Check if already exists
     stores = load_stores(STORES_PATH)
     new_store = StoreConfig(url, platform)
@@ -177,17 +198,29 @@ async def cmd_remove(args: str, **_):
 
 async def cmd_test(args: str, **_):
     """Test a store -- check sitemap and scrape a sample product."""
-    url = args.strip()
-    if not url:
-        await _send("\u274c \u05e9\u05d9\u05de\u05d5\u05e9: /test <code>&lt;url&gt;</code>")
+    parts = args.strip().split()
+    if not parts:
+        await _send(
+            "\u274c \u05e9\u05d9\u05de\u05d5\u05e9: /test <code>&lt;url&gt;</code> [platform]\n\n"
+            "\u05d3\u05d5\u05d2\u05de\u05d0\u05d5\u05ea:\n"
+            "/test https://example.co.il\n"
+            "/test https://example.co.il magento"
+        )
         return
+
+    url = parts[0]
+    platform = parts[1] if len(parts) > 1 else ""
 
     if not url.startswith("http"):
         url = f"https://{url}"
 
     await _send(f"\U0001f50d \u05d1\u05d5\u05d3\u05e7 \u05d0\u05ea {url}...")
 
-    store = StoreConfig(url)
+    # Auto-detect platform if not specified
+    if not platform:
+        platform = await _detect_platform(url)
+
+    store = StoreConfig(url, platform)
     lines = [f"\U0001f50d <b>\u05d1\u05d3\u05d9\u05e7\u05ea {store.name}</b> ({store.platform})\n"]
 
     # 1. Sitemap discovery
