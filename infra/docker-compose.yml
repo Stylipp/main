@@ -168,7 +168,7 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-stylipp}/stylipp-scraper:${TAG:-latest}
     container_name: stylipp_bot
     restart: unless-stopped
-    command: ["python", "run.py", "--bot"]
+    command: ["--bot"]
     environment:
       - BACKEND_API_URL=http://stylipp-backend:8000
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
