@@ -10,7 +10,7 @@ from .change_detection import ChangeDetector
 from .config import StoreConfig, load_stores
 from .product_scraper import scrape_batch
 from .schemas import ScrapedProduct
-from .sitemap import fetch_product_urls
+from .sitemap import fetch_product_urls, SiteBlockedError
 from .backend_sync import BackendSync
 from . import telegram
 
@@ -69,6 +69,9 @@ async def run_store(
         if report.removed_ids:
             await detector.mark_removed(store.id, report.removed_ids)
 
+    except SiteBlockedError:
+        stats["error"] = "403 Forbidden — Cloudflare/WAF blocks this server's IP"
+        logger.error("⛔ %s: site blocks this IP (403). Needs proxy or IP whitelist.", store.name)
     except Exception as e:
         stats["error"] = str(e)
         logger.error("Pipeline failed for %s: %s", store.name, e, exc_info=True)

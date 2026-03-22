@@ -84,7 +84,7 @@ class StoreConfig:
             self.rate_limit_seconds = 2.0  # Shopify/Cloudflare needs slower rate
         elif self.platform == "magento":
             self.product_url_pattern = ""  # no fixed prefix — filter via regex
-            self.product_url_regex = r"/m\d{5,}"
+            self.product_url_regex = r"/m?\d{7,}"
             self.selectors = _MAGENTO_SELECTORS
         else:
             self.product_url_pattern = "/product/"

@@ -11,7 +11,7 @@ from pathlib import Path
 import httpx
 
 from .config import StoreConfig, load_stores
-from .sitemap import discover_sitemap, fetch_product_urls
+from .sitemap import discover_sitemap, fetch_product_urls, SiteBlockedError
 from .product_scraper import scrape_product
 from .pipeline import run_all
 
@@ -224,7 +224,20 @@ async def cmd_test(args: str, **_):
     lines = [f"\U0001f50d <b>\u05d1\u05d3\u05d9\u05e7\u05ea {store.name}</b> ({store.platform})\n"]
 
     # 1. Sitemap discovery
-    sitemap = await discover_sitemap(store.base_url)
+    try:
+        sitemap = await discover_sitemap(store.base_url)
+    except SiteBlockedError:
+        lines.append(
+            "\u26d4 <b>\u05d4\u05d0\u05ea\u05e8 \u05d7\u05d5\u05e1\u05dd \u05d0\u05ea \u05d4-IP \u05e9\u05dc \u05d4\u05e9\u05e8\u05ea (403 Forbidden)</b>\n"
+            "Cloudflare/WAF \u05de\u05d6\u05d4\u05d4 \u05e9\u05d4\u05d1\u05e7\u05e9\u05d4 \u05de\u05d2\u05d9\u05e2\u05d4 \u05de-datacenter IP \u05d5\u05d7\u05d5\u05e1\u05dd \u05d0\u05d5\u05ea\u05d4.\n\n"
+            "\U0001f527 \u05e4\u05ea\u05e8\u05d5\u05e0\u05d5\u05ea \u05d0\u05e4\u05e9\u05e8\u05d9\u05d9\u05dd:\n"
+            "  \u2022 \u05e9\u05d9\u05de\u05d5\u05e9 \u05d1-proxy / residential IP\n"
+            "  \u2022 \u05d4\u05d5\u05e1\u05e4\u05ea \u05d4-IP \u05dc-whitelist \u05e9\u05dc \u05d4\u05d0\u05ea\u05e8\n"
+            "  \u2022 \u05e4\u05e0\u05d9\u05d9\u05d4 \u05dc\u05d1\u05e2\u05dc \u05d4\u05d0\u05ea\u05e8"
+        )
+        await _send("\n".join(lines))
+        return
+
     if not sitemap:
         lines.append("\u274c \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 sitemap")
         await _send("\n".join(lines))
