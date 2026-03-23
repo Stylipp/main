@@ -117,7 +117,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.stylipp-backend.rule=Host(`api.stylipp.com`)"
       - "traefik.http.routers.stylipp-backend.entrypoints=web"
-      # - "traefik.http.routers.stylipp-backend.middlewares=security-headers"
+      - "traefik.http.middlewares.forwarded-proto.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.routers.stylipp-backend.middlewares=forwarded-proto"
       - "traefik.http.services.stylipp-backend.loadbalancer.server.port=8000"
       - "traefik.docker.network=web"
 
