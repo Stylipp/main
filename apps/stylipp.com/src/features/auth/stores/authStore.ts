@@ -26,13 +26,13 @@ export const useAuthStore = create<AuthState>()(
       user: null,
 
       login: async (email: string, password: string) => {
-        const response = await api.post('/auth/login', { email, password })
+        const response = await api.post('/auth/login/', { email, password })
         const { access_token, user } = response.data
         set({ token: access_token, user })
       },
 
       register: async (email: string, password: string, displayName?: string) => {
-        const response = await api.post('/auth/register', {
+        const response = await api.post('/auth/register/', {
           email,
           password,
           display_name: displayName,
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
 
       fetchMe: async () => {
         try {
-          const response = await api.get('/auth/me')
+          const response = await api.get('/auth/me/')
           set({ user: response.data })
         } catch {
           // If fetchMe fails (e.g., expired token), clear auth state
