@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (1/TBD plans complete)
+**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (2/TBD plans complete)
 
 ## Current Position
 
 Phase: 6 of 16 (Swipe Interface & Feedback)
-Plan: 1 in current phase
+Plan: 2 in current phase
 Status: Plan complete
-Last activity: 2026-03-23 — Completed 06-01-PLAN.md (feedback pipeline backend)
+Last activity: 2026-03-23 — Completed 06-02-PLAN.md (swipe feed state management)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (1/TBD) | Phase 16 ✓ (Phases 7-15 pending)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (2/TBD) | Phase 16 ✓ (Phases 7-15 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
+- Total plans completed: 33
 - Average duration: ~9 min
-- Total execution time: ~4h 56m
+- Total execution time: ~4h 59m
 
 **By Phase:**
 
@@ -34,10 +34,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 4 | 5/5 ✓ | ~33m | ~7m |
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
-| 6 | 1/TBD | ~12m | ~12m |
+| 6 | 2/TBD | ~15m | ~8m |
 
 **Recent Trend:**
-- Last 5 plans: 16-04, 16-05, 16-06, 06-01
+- Last 5 plans: 16-05, 16-06, 06-01, 06-02
 - Trend: Steady
 
 ## Accumulated Context
@@ -100,6 +100,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 06-01 | Plain String for action column (not PostgreSQL ENUM) | Avoids migration complexity; validation at Pydantic schema level |
 | 06-01 | No uniqueness on user+product interactions | Users can re-interact (undo dislike -> like) |
 | 06-01 | Feed exclusion merges DB interacted IDs with seen_ids | More reliable than client-side dedup alone |
+| 06-02 | Session-only Zustand store (no persist middleware) | Feed data shouldn't survive page reload |
+| 06-02 | Exported selector functions (not store getters) | Better reusability and tree-shaking |
+| 06-02 | feedbackService as plain module, not a hook | Hooks compose these; plain functions testable independently |
+| 06-02 | isFetchingMore ref guard in useFeed | Prevents concurrent pagination requests |
 
 ### Deferred Issues
 
@@ -122,5 +126,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed 06-01 (Feedback Pipeline Backend — UserInteraction model, POST /api/feedback, feed filtering)
+Stopped at: Completed 06-02 (Swipe Feed State Management — Zustand swipeStore, useFeed hook, feedbackService, types)
 Resume file: None
