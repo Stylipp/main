@@ -67,7 +67,7 @@ def rank_candidates(
         payload = candidate.payload
 
         raw_cosine.append(candidate.score)
-        raw_cluster.append(cluster_priors.get(payload["cluster_id"], 0.0))
+        raw_cluster.append(cluster_priors.get(payload.get("cluster_id", 0), 0.0))
         raw_price.append(
             compute_price_affinity(payload["price"], price_median, price_std)
         )
