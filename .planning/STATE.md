@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (2/TBD plans complete)
+**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (3/TBD plans complete)
 
 ## Current Position
 
 Phase: 6 of 16 (Swipe Interface & Feedback)
-Plan: 2 in current phase
+Plan: 3 in current phase
 Status: Plan complete
-Last activity: 2026-03-23 — Completed 06-02-PLAN.md (swipe feed state management)
+Last activity: 2026-03-23 — Completed 06-03-PLAN.md (SwipeCard with Motion drag gestures)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (2/TBD) | Phase 16 ✓ (Phases 7-15 pending)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (3/TBD) | Phase 16 ✓ (Phases 7-15 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 33
+- Total plans completed: 34
 - Average duration: ~9 min
-- Total execution time: ~4h 59m
+- Total execution time: ~5h 3m
 
 **By Phase:**
 
@@ -34,10 +34,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 4 | 5/5 ✓ | ~33m | ~7m |
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
-| 6 | 2/TBD | ~15m | ~8m |
+| 6 | 3/TBD | ~19m | ~6m |
 
 **Recent Trend:**
-- Last 5 plans: 16-05, 16-06, 06-01, 06-02
+- Last 5 plans: 16-06, 06-01, 06-02, 06-03
 - Trend: Steady
 
 ## Accumulated Context
@@ -104,6 +104,9 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 06-02 | Exported selector functions (not store getters) | Better reusability and tree-shaking |
 | 06-02 | feedbackService as plain module, not a hook | Hooks compose these; plain functions testable independently |
 | 06-02 | isFetchingMore ref guard in useFeed | Prevents concurrent pagination requests |
+| 06-03 | SwipeIndicators committed with SwipeCard (not separately) | SwipeCard imports SwipeIndicators; can't compile without it |
+| 06-03 | Gradient overlay on card bottom for text readability | White text over product images needs contrast background |
+| 06-03 | motion.create(IconButton) for animated action buttons | Combines MUI styling with Motion whileHover/whileTap animations |
 
 ### Deferred Issues
 
@@ -126,5 +129,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed 06-02 (Swipe Feed State Management — Zustand swipeStore, useFeed hook, feedbackService, types)
+Stopped at: Completed 06-03 (SwipeCard with Motion drag gestures — SwipeCard, SwipeIndicators, SwipeActions)
 Resume file: None
