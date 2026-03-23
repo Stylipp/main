@@ -9,6 +9,7 @@ import PhotoUploadStep from './features/onboarding/components/PhotoUploadStep'
 import CalibrationStep from './features/onboarding/components/CalibrationStep'
 import ProfileStep from './features/onboarding/components/ProfileStep'
 import OnboardingComplete from './features/onboarding/components/OnboardingComplete'
+import FeedPage from './features/feed/pages/FeedPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
@@ -34,7 +35,7 @@ export default function App() {
         {/* Auth + onboarding required */}
         <Route element={<PrivateRoute />}>
           <Route element={<OnboardingGate />}>
-            <Route path="/feed" element={<div>Feed coming in Phase 5</div>} />
+            <Route path="/feed" element={<FeedPage />} />
           </Route>
         </Route>
 
