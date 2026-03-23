@@ -49,7 +49,7 @@ export function useCalibration(): UseCalibrationReturn {
 
     try {
       const response = await api.post<{ items: CalibrationItem[]; total: number }>(
-        '/onboarding/calibration-items/',
+        '/onboarding/calibration-items',
         { embeddings: photoEmbeddings }
       )
 

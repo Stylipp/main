@@ -28,7 +28,7 @@ export default function ProfileStep() {
     setError(null)
 
     try {
-      await api.post('/onboarding/complete/', {
+      await api.post('/onboarding/complete', {
         photo_embeddings: photoEmbeddings,
         liked_product_ids: calibrationLikes,
         disliked_product_ids: calibrationDislikes,
