@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (3/TBD plans complete)
+**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (4/TBD plans complete)
 
 ## Current Position
 
 Phase: 6 of 16 (Swipe Interface & Feedback)
-Plan: 3 in current phase
+Plan: 4 in current phase
 Status: Plan complete
-Last activity: 2026-03-23 — Completed 06-03-PLAN.md (SwipeCard with Motion drag gestures)
+Last activity: 2026-03-23 — Completed 06-04-PLAN.md (SwipeCardStack + useFeedbackSubmit)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (3/TBD) | Phase 16 ✓ (Phases 7-15 pending)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ (Phases 7-15 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34
+- Total plans completed: 35
 - Average duration: ~9 min
-- Total execution time: ~5h 3m
+- Total execution time: ~5h 8m
 
 **By Phase:**
 
@@ -34,10 +34,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 4 | 5/5 ✓ | ~33m | ~7m |
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
-| 6 | 3/TBD | ~19m | ~6m |
+| 6 | 4/TBD | ~24m | ~6m |
 
 **Recent Trend:**
-- Last 5 plans: 16-06, 06-01, 06-02, 06-03
+- Last 5 plans: 06-01, 06-02, 06-03, 06-04
 - Trend: Steady
 
 ## Accumulated Context
@@ -107,6 +107,9 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 06-03 | SwipeIndicators committed with SwipeCard (not separately) | SwipeCard imports SwipeIndicators; can't compile without it |
 | 06-03 | Gradient overlay on card bottom for text readability | White text over product images needs contrast background |
 | 06-03 | motion.create(IconButton) for animated action buttons | Combines MUI styling with Motion whileHover/whileTap animations |
+| 06-04 | Exit animation on outer motion.div wrapper in SwipeCardStack | AnimatePresence controls lifecycle at deck level, not per-card |
+| 06-04 | useSwipeStore.getState() for imperative reads in callbacks | Avoids stale closures in retryPending and undoLastSwipe |
+| 06-04 | Opposite action submitted on undo for corrective learning | Backend latest record wins; like->dislike correction updates model |
 
 ### Deferred Issues
 
@@ -129,5 +132,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed 06-03 (SwipeCard with Motion drag gestures — SwipeCard, SwipeIndicators, SwipeActions)
+Stopped at: Completed 06-04 (SwipeCardStack + useFeedbackSubmit — deck manager and optimistic feedback hook)
 Resume file: None
