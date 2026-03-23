@@ -1,24 +1,28 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Skeleton from '@mui/material/Skeleton'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
+import Snackbar from '@mui/material/Snackbar'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import { SwipeCardStack, type SwipeCardStackRef } from '../components/SwipeCardStack'
 import { SwipeActions } from '../components/SwipeActions'
+import { FeedEmptyState } from '../components/FeedEmptyState'
 import { useFeed } from '../hooks/useFeed'
 import { useFeedbackSubmit } from '../hooks/useFeedbackSubmit'
 import { useSwipeStore, canUndo as canUndoSelector } from '../stores/swipeStore'
 
 export default function FeedPage() {
-  const { currentCard, isLoading, error, refetch } = useFeed()
+  const { currentCard, remainingCards, isLoading, error, hasMore, refetch } = useFeed()
   const { submitFeedback, undoLastSwipe } = useFeedbackSubmit()
   const userCanUndo = useSwipeStore(canUndoSelector)
   const cards = useSwipeStore((s) => s.cards)
   const reset = useSwipeStore((s) => s.reset)
 
   const stackRef = useRef<SwipeCardStackRef>(null)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [showSaved, setShowSaved] = useState(false)
 
   useEffect(() => {
     return () => reset()
@@ -42,11 +46,20 @@ export default function FeedPage() {
   const handleSave = useCallback(() => {
     if (currentCard) {
       submitFeedback(currentCard.product_id, 'save')
+      setShowSaved(true)
     }
   }, [currentCard, submitFeedback])
 
+  const handleUndo = useCallback(() => {
+    if (isAnimating) return
+    undoLastSwipe()
+    setIsAnimating(true)
+    setTimeout(() => setIsAnimating(false), 300)
+  }, [isAnimating, undoLastSwipe])
+
   const isInitialLoad = isLoading && cards.length === 0
   const isFetchingMore = isLoading && cards.length > 0
+  const noCards = !isInitialLoad && remainingCards === 0 && !hasMore && !isLoading
 
   return (
     <Box
@@ -110,6 +123,8 @@ export default function FeedPage() {
               Try Again
             </Button>
           </Box>
+        ) : noCards ? (
+          <FeedEmptyState onRefresh={refetch} />
         ) : (
           <SwipeCardStack ref={stackRef} onFeedback={handleFeedback} />
         )}
@@ -120,9 +135,17 @@ export default function FeedPage() {
         onLike={handleLike}
         onDislike={handleDislike}
         onSave={handleSave}
-        onUndo={undoLastSwipe}
-        canUndo={userCanUndo}
-        disabled={!currentCard}
+        onUndo={handleUndo}
+        canUndo={userCanUndo && !isAnimating}
+        disabled={isInitialLoad || (noCards && !userCanUndo)}
+      />
+
+      <Snackbar
+        open={showSaved}
+        autoHideDuration={1500}
+        onClose={() => setShowSaved(false)}
+        message="Saved!"
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       />
     </Box>
   )
