@@ -13,6 +13,7 @@ from src.features.ai.service.embedding_service import EmbeddingService
 from src.features.auth.router.router import router as auth_router
 from src.features.clustering.router.router import router as clustering_router
 from src.features.feed.router.router import router as feed_router
+from src.features.feedback.router.router import router as feedback_router
 from src.features.onboarding.router.router import router as onboarding_router
 from src.features.products.router.router import router as products_router
 from src.features.storage.router.router import router as storage_router
@@ -96,3 +97,4 @@ app.include_router(products_router, prefix="/api")
 app.include_router(clustering_router, prefix="/api")
 app.include_router(onboarding_router, prefix="/api")
 app.include_router(feed_router, prefix="/api")
+app.include_router(feedback_router, prefix="/api")
