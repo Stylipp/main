@@ -27,7 +27,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import Settings
 from src.features.feed.service.ranking_service import RankedCandidate, rank_candidates
+from src.models.product import Product
 from src.models.user import User
+from src.models.user_interaction import UserInteraction
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +260,41 @@ class FeedService:
 
         return candidates
 
+    async def _get_interacted_product_ids(
+        self, user_id: str, session: AsyncSession
+    ) -> set[str]:
+        """Get external_ids of products the user has already interacted with.
+
+        Queries UserInteraction joined with Product to retrieve the set of
+        external_id strings (Qdrant point IDs) the user has already
+        liked/disliked/saved.
+
+        Args:
+            user_id: The user's UUID string.
+            session: Async SQLAlchemy session.
+
+        Returns:
+            Set of external_id strings for already-interacted products.
+        """
+        from uuid import UUID
+
+        stmt = (
+            select(Product.external_id)
+            .join(UserInteraction, UserInteraction.product_id == Product.id)
+            .where(UserInteraction.user_id == UUID(user_id))
+        )
+        result = await session.execute(stmt)
+        external_ids = {row[0] for row in result.all()}
+
+        if external_ids:
+            logger.info(
+                "User %s has %d previously interacted products",
+                user_id,
+                len(external_ids),
+            )
+
+        return external_ids
+
     async def generate_feed(
         self,
         user_id: str,
@@ -304,10 +341,14 @@ class FeedService:
         # Step 3: Load cluster priors
         cluster_priors = await self._load_cluster_priors()
 
+        # Step 3.5: Merge interacted product IDs with seen_ids for exclusion
+        interacted_ids = await self._get_interacted_product_ids(user_id, session)
+        all_exclude_ids = list(set(seen_ids) | interacted_ids)
+
         # Step 4: Retrieve candidates with shortfall handling
         candidates = await self._retrieve_with_shortfall_handling(
             user_vector=user_vector,
-            seen_ids=seen_ids,
+            seen_ids=all_exclude_ids,
             price_min=price_min,
             price_max=price_max,
             page_size=page_size,
@@ -331,7 +372,7 @@ class FeedService:
             cluster_priors=cluster_priors,
             user_price_profile=user_price_profile,
             primary_ranked=ranked,
-            seen_ids=seen_ids,
+            seen_ids=all_exclude_ids,
             page_size=page_size,
         )
 
