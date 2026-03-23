@@ -6,16 +6,16 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 16 complete — Automated Product Scraping & Sync (6/6 plans complete)
+**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (1/TBD plans complete)
 
 ## Current Position
 
-Phase: 16 of 16 (Automated Product Scraping & Sync)
-Plan: 6 of 6 in current phase
-Status: Phase complete
-Last activity: 2026-03-18 — Completed 16-06-PLAN.md (parallel execution, 4 waves)
+Phase: 6 of 16 (Swipe Interface & Feedback)
+Plan: 1 in current phase
+Status: Plan complete
+Last activity: 2026-03-23 — Completed 06-01-PLAN.md (feedback pipeline backend)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 16 ✓ (Phases 6-15 pending)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (1/TBD) | Phase 16 ✓ (Phases 7-15 pending)
 
 ## Performance Metrics
 
@@ -34,10 +34,11 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 16
 | 4 | 5/5 ✓ | ~33m | ~7m |
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
+| 6 | 1/TBD | ~12m | ~12m |
 
 **Recent Trend:**
-- Last 5 plans: 16-02, 16-03, 16-04, 16-05, 16-06
-- Trend: Steady (parallel execution for Phase 16)
+- Last 5 plans: 16-04, 16-05, 16-06, 06-01
+- Trend: Steady
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 16
 | 16-04 | Removed products logged but not deleted from PostgreSQL | Preserves user interaction history; archival is future concern |
 | 16-05 | Reuse existing EmbeddingService/QualityGateService | No new model instances; consistent with ingestion pipeline |
 | 16-06 | Per-site parallelism via asyncio.gather | Rate limiting requires sequential within site; parallel across sites |
+| 06-01 | Plain String for action column (not PostgreSQL ENUM) | Avoids migration complexity; validation at Pydantic schema level |
+| 06-01 | No uniqueness on user+product interactions | Users can re-interact (undo dislike -> like) |
+| 06-01 | Feed exclusion merges DB interacted IDs with seen_ids | More reliable than client-side dedup alone |
 
 ### Deferred Issues
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18
-Stopped at: Completed Phase 16 (Automated Product Scraping & Sync — 6 plans via parallel execution in 4 waves, ~56 min)
+Last session: 2026-03-23
+Stopped at: Completed 06-01 (Feedback Pipeline Backend — UserInteraction model, POST /api/feedback, feed filtering)
 Resume file: None
