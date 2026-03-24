@@ -172,13 +172,19 @@ async def get_feed(
         )
 
     # Step 4: Enrich with product metadata from PostgreSQL
-    product_ids = [c.product_id for c in paged_candidates]
-    stmt = select(Product).where(Product.external_id.in_(product_ids))
+    product_ids = []
+    for product_id in (c.product_id for c in paged_candidates):
+        try:
+            product_ids.append(UUID(product_id))
+        except ValueError:
+            logger.warning("Skipping invalid feed product_id=%s", product_id)
+
+    stmt = select(Product).where(Product.id.in_(product_ids))
     result = await session.execute(stmt)
     products = result.scalars().all()
 
-    # Build lookup by external_id
-    product_map: dict[str, Product] = {p.external_id: p for p in products}
+    # Build lookup by PostgreSQL UUID string (matches Qdrant point ID payload).
+    product_map: dict[str, Product] = {str(p.id): p for p in products}
 
     # Step 5: Build FeedItem list with explanation templates
     items: list[FeedItem] = []
@@ -187,7 +193,7 @@ async def get_feed(
         if product is None:
             # Skip candidates without matching product metadata
             logger.warning(
-                "Product metadata not found for external_id=%s, skipping",
+                "Product metadata not found for product_id=%s, skipping",
                 candidate.product_id,
             )
             continue

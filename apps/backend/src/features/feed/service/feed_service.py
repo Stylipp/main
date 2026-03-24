@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import math
+from types import SimpleNamespace
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
@@ -263,37 +264,97 @@ class FeedService:
     async def _get_interacted_product_ids(
         self, user_id: str, session: AsyncSession
     ) -> set[str]:
-        """Get external_ids of products the user has already interacted with.
+        """Get Qdrant point IDs of products the user has already interacted with.
 
         Queries UserInteraction joined with Product to retrieve the set of
-        external_id strings (Qdrant point IDs) the user has already
-        liked/disliked/saved.
+        PostgreSQL product UUIDs that back the Qdrant point IDs the user has
+        already liked/disliked/saved.
 
         Args:
             user_id: The user's UUID string.
             session: Async SQLAlchemy session.
 
         Returns:
-            Set of external_id strings for already-interacted products.
+            Set of product UUID strings for already-interacted products.
         """
         from uuid import UUID
 
         stmt = (
-            select(Product.external_id)
+            select(Product.id)
             .join(UserInteraction, UserInteraction.product_id == Product.id)
             .where(UserInteraction.user_id == UUID(user_id))
         )
         result = await session.execute(stmt)
-        external_ids = {row[0] for row in result.all()}
+        product_ids = {str(row[0]) for row in result.all()}
 
-        if external_ids:
+        if product_ids:
             logger.info(
                 "User %s has %d previously interacted products",
                 user_id,
-                len(external_ids),
+                len(product_ids),
             )
 
-        return external_ids
+        return product_ids
+
+    @staticmethod
+    def _prepare_candidates_for_ranking(
+        candidates: list,
+        *,
+        source: str,
+    ) -> list[SimpleNamespace]:
+        """Normalize Qdrant candidates before ranking.
+
+        Older or partially-clustered product payloads may be missing fields such
+        as cluster_id. The ranker expects a stable payload shape, so we drop
+        irreparably malformed candidates and default missing cluster_id to 0.0.
+        """
+        prepared: list[SimpleNamespace] = []
+        dropped_count = 0
+        missing_cluster_count = 0
+
+        for candidate in candidates:
+            payload = dict(candidate.payload or {})
+
+            missing_required = [
+                key
+                for key in ("product_id", "price", "created_at")
+                if key not in payload
+            ]
+            if missing_required:
+                dropped_count += 1
+                logger.warning(
+                    "Dropping %s candidate missing payload keys %s",
+                    source,
+                    ",".join(missing_required),
+                )
+                continue
+
+            if "cluster_id" not in payload:
+                payload["cluster_id"] = 0
+                missing_cluster_count += 1
+
+            prepared.append(
+                SimpleNamespace(
+                    score=candidate.score,
+                    payload=payload,
+                )
+            )
+
+        if missing_cluster_count:
+            logger.warning(
+                "Defaulted missing cluster_id to 0 for %d %s candidates",
+                missing_cluster_count,
+                source,
+            )
+
+        if dropped_count:
+            logger.warning(
+                "Dropped %d malformed %s candidates before ranking",
+                dropped_count,
+                source,
+            )
+
+        return prepared
 
     async def generate_feed(
         self,
@@ -352,6 +413,10 @@ class FeedService:
             price_min=price_min,
             price_max=price_max,
             page_size=page_size,
+        )
+        candidates = self._prepare_candidates_for_ranking(
+            candidates,
+            source="primary",
         )
 
         if not candidates:
@@ -486,6 +551,10 @@ class FeedService:
             score_threshold=_SCORE_THRESHOLD,
             with_payload=True,
             with_vectors=False,
+        )
+        diversity_candidates = self._prepare_candidates_for_ranking(
+            diversity_candidates,
+            source="diversity",
         )
 
         if not diversity_candidates:

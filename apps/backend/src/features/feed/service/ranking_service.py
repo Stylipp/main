@@ -64,15 +64,17 @@ def rank_candidates(
     raw_freshness = []
 
     for candidate in candidates:
-        payload = candidate.payload
+        payload = candidate.payload or {}
 
         raw_cosine.append(candidate.score)
         raw_cluster.append(cluster_priors.get(payload.get("cluster_id", 0), 0.0))
         raw_price.append(
-            compute_price_affinity(payload["price"], price_median, price_std)
+            compute_price_affinity(
+                float(payload.get("price", 0.0)), price_median, price_std
+            )
         )
 
-        created_at = payload["created_at"]
+        created_at = payload.get("created_at", datetime.now(timezone.utc))
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at)
         if created_at.tzinfo is None:
@@ -88,6 +90,7 @@ def rank_candidates(
     # Compute weighted final scores and build result
     results = []
     for i, candidate in enumerate(candidates):
+        payload = candidate.payload or {}
         final_score = (
             W_COSINE * norm_cosine[i]
             + W_CLUSTER_PRIOR * norm_cluster[i]
@@ -97,7 +100,7 @@ def rank_candidates(
 
         results.append(
             RankedCandidate(
-                product_id=candidate.payload["product_id"],
+                product_id=str(payload.get("product_id", "")),
                 score=final_score,
                 cosine_score=norm_cosine[i],
                 cluster_prior_score=norm_cluster[i],
