@@ -42,7 +42,7 @@ export function usePhotoUpload(): UsePhotoUploadReturn {
       const formData = new FormData()
       formData.append('file', compressed, file.name)
 
-      const response = await api.post<UploadResult>('/onboarding/photos', formData, {
+      const response = await api.post<UploadResult>('/onboarding/photos/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (e.total) {
