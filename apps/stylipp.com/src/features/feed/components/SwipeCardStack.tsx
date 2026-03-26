@@ -48,10 +48,9 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
     return (
       <Box
         sx={{
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
+          /* CSS Grid stacks all children in same cell — no absolute needed */
+          display: 'grid',
+          placeItems: 'center',
           width: '100%',
           height: '100%',
           overflow: 'visible',
@@ -62,7 +61,7 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
             <motion.div
               key={card.product_id}
               style={{
-                position: 'absolute',
+                gridArea: '1 / 1',
                 zIndex: 3 - i,
               }}
               initial={{ scale: 0.9, y: 20 }}

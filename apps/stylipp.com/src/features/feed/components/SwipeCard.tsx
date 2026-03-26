@@ -40,9 +40,8 @@ export function SwipeCard({ item, isTop, onSwipe, exitX }: SwipeCardProps) {
           x,
           rotate,
           touchAction: 'none',
-          width: '88vw',
+          width: 'calc(100vw - 32px)',
           maxWidth: 380,
-          position: 'absolute',
           pointerEvents: isTop ? 'auto' : 'none',
         }}
         drag={isTop ? 'x' : false}

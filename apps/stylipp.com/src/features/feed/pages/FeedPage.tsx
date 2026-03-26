@@ -69,6 +69,10 @@ export default function FeedPage() {
         height: '100dvh',
         bgcolor: 'background.default',
         overflow: 'hidden',
+        /* Center as a mobile-app shell on desktop */
+        maxWidth: 480,
+        mx: 'auto',
+        width: '100%',
       }}
     >
       {/* Header */}
