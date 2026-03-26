@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import IconButton, { type IconButtonProps } from '@mui/material/IconButton'
 import UndoIcon from '@mui/icons-material/Undo'
 import CloseIcon from '@mui/icons-material/Close'
-import BookmarkIcon from '@mui/icons-material/Bookmark'
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
 import FavoriteIcon from '@mui/icons-material/Favorite'
 import { motion, type MotionProps } from 'framer-motion'
 
@@ -32,8 +32,9 @@ export function SwipeActions({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 2,
-        py: 2,
+        gap: { xs: 1.5, sm: 2.5 },
+        py: { xs: 2, sm: 2.5 },
+        pb: { xs: 3, sm: 3 },
       }}
     >
       {/* Undo button */}
@@ -44,13 +45,16 @@ export function SwipeActions({
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         sx={{
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
           border: '2px solid',
-          borderColor: 'action.disabled',
-          color: 'text.secondary',
+          borderColor: canUndo && !disabled ? 'text.secondary' : 'action.disabledBackground',
+          color: canUndo && !disabled ? 'text.secondary' : 'action.disabled',
+          transition: 'all 0.2s ease',
           '&:hover': {
-            borderColor: 'text.secondary',
+            borderColor: 'primary.main',
+            color: 'primary.main',
+            bgcolor: 'rgba(91, 74, 228, 0.06)',
           },
           '&.Mui-disabled': {
             borderColor: 'action.disabledBackground',
@@ -67,17 +71,22 @@ export function SwipeActions({
         disabled={disabled}
         aria-label="Dislike"
         whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.85 }}
         sx={{
-          width: 56,
-          height: 56,
-          bgcolor: 'error.main',
-          color: '#ffffff',
+          width: 60,
+          height: 60,
+          bgcolor: '#ffffff',
+          color: 'error.main',
+          border: '2.5px solid',
+          borderColor: 'error.main',
+          transition: 'all 0.2s ease',
           '&:hover': {
-            bgcolor: 'error.dark',
+            bgcolor: 'error.main',
+            color: '#ffffff',
           },
           '&.Mui-disabled': {
-            bgcolor: 'action.disabledBackground',
+            bgcolor: 'transparent',
+            borderColor: 'action.disabledBackground',
             color: 'action.disabled',
           },
         }}
@@ -96,10 +105,12 @@ export function SwipeActions({
           width: 48,
           height: 48,
           border: '2px solid',
-          borderColor: 'secondary.main',
-          color: 'secondary.main',
+          borderColor: 'primary.main',
+          color: 'primary.main',
+          transition: 'all 0.2s ease',
           '&:hover': {
-            bgcolor: 'rgba(236, 72, 153, 0.08)',
+            bgcolor: 'primary.main',
+            color: '#ffffff',
           },
           '&.Mui-disabled': {
             borderColor: 'action.disabledBackground',
@@ -107,7 +118,7 @@ export function SwipeActions({
           },
         }}
       >
-        <BookmarkIcon sx={{ fontSize: 24 }} />
+        <BookmarkBorderIcon sx={{ fontSize: 22 }} />
       </AnimatedIconButton>
 
       {/* Like button */}
@@ -116,17 +127,22 @@ export function SwipeActions({
         disabled={disabled}
         aria-label="Like"
         whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.85 }}
         sx={{
-          width: 56,
-          height: 56,
-          bgcolor: 'success.main',
-          color: '#ffffff',
+          width: 60,
+          height: 60,
+          bgcolor: '#ffffff',
+          color: 'success.main',
+          border: '2.5px solid',
+          borderColor: 'success.main',
+          transition: 'all 0.2s ease',
           '&:hover': {
-            bgcolor: 'success.dark',
+            bgcolor: 'success.main',
+            color: '#ffffff',
           },
           '&.Mui-disabled': {
-            bgcolor: 'action.disabledBackground',
+            bgcolor: 'transparent',
+            borderColor: 'action.disabledBackground',
             color: 'action.disabled',
           },
         }}

@@ -66,8 +66,9 @@ export default function FeedPage() {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100dvh',
+        height: '100dvh',
         bgcolor: 'background.default',
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
@@ -77,36 +78,64 @@ export default function FeedPage() {
           alignItems: 'center',
           justifyContent: 'center',
           py: 1.5,
+          px: 2,
           position: 'relative',
+          flexShrink: 0,
         }}
       >
         <Typography
           variant="h6"
-          sx={{ fontWeight: 700, color: 'primary.main', letterSpacing: '-0.02em' }}
+          sx={{
+            fontWeight: 700,
+            color: 'primary.main',
+            letterSpacing: '-0.03em',
+            fontSize: '1.35rem',
+          }}
         >
           Stylipp
         </Typography>
-        {isFetchingMore && <CircularProgress size={16} sx={{ position: 'absolute', right: 16 }} />}
+        {isFetchingMore && (
+          <CircularProgress
+            size={14}
+            thickness={5}
+            sx={{ position: 'absolute', right: 20, color: 'primary.light' }}
+          />
+        )}
       </Box>
 
-      {/* Main area */}
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Main card area — takes all remaining space */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 0,
+          px: 2,
+        }}
+      >
         {isInitialLoad ? (
-          <Box sx={{ position: 'relative', width: '90vw', maxWidth: 400 }}>
+          <Box sx={{ position: 'relative', width: '100%', maxWidth: 380 }}>
             <Skeleton
               variant="rounded"
-              sx={{ width: '100%', aspectRatio: '3/4', borderRadius: '16px' }}
+              animation="wave"
+              sx={{
+                width: '100%',
+                aspectRatio: '3/4',
+                borderRadius: '20px',
+              }}
             />
             <Skeleton
               variant="rounded"
+              animation="wave"
               sx={{
-                width: '90%',
+                width: '92%',
                 aspectRatio: '3/4',
-                borderRadius: '16px',
+                borderRadius: '20px',
                 position: 'absolute',
-                top: 8,
-                left: '5%',
-                opacity: 0.5,
+                top: 10,
+                left: '4%',
+                opacity: 0.4,
               }}
             />
           </Box>
@@ -119,7 +148,7 @@ export default function FeedPage() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               {error}
             </Typography>
-            <Button variant="outlined" onClick={refetch}>
+            <Button variant="outlined" onClick={refetch} sx={{ borderRadius: 12 }}>
               Try Again
             </Button>
           </Box>
@@ -130,15 +159,17 @@ export default function FeedPage() {
         )}
       </Box>
 
-      {/* Actions */}
-      <SwipeActions
-        onLike={handleLike}
-        onDislike={handleDislike}
-        onSave={handleSave}
-        onUndo={handleUndo}
-        canUndo={userCanUndo && !isAnimating}
-        disabled={isInitialLoad || (noCards && !userCanUndo)}
-      />
+      {/* Actions — fixed at bottom */}
+      <Box sx={{ flexShrink: 0 }}>
+        <SwipeActions
+          onLike={handleLike}
+          onDislike={handleDislike}
+          onSave={handleSave}
+          onUndo={handleUndo}
+          canUndo={userCanUndo && !isAnimating}
+          disabled={isInitialLoad || (noCards && !userCanUndo)}
+        />
+      </Box>
 
       <Snackbar
         open={showSaved}
@@ -146,6 +177,14 @@ export default function FeedPage() {
         onClose={() => setShowSaved(false)}
         message="Saved!"
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        ContentProps={{
+          sx: {
+            bgcolor: 'primary.main',
+            borderRadius: '12px',
+            fontWeight: 600,
+            minWidth: 'auto',
+          },
+        }}
       />
     </Box>
   )

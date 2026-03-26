@@ -19,34 +19,37 @@ export function SwipeIndicators({ x }: SwipeIndicatorsProps) {
         style={{
           opacity: likeOpacity,
           position: 'absolute',
-          top: 24,
-          right: 24,
+          top: 20,
+          right: 20,
           zIndex: 10,
           pointerEvents: 'none',
-          transform: 'rotate(-15deg)',
+          transform: 'rotate(-12deg)',
         }}
       >
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 0.5,
+            gap: 0.75,
+            bgcolor: 'rgba(34, 197, 94, 0.15)',
+            backdropFilter: 'blur(8px)',
             border: '3px solid',
             borderColor: 'success.main',
-            borderRadius: '8px',
-            px: 1.5,
-            py: 0.5,
+            borderRadius: '10px',
+            px: 2,
+            py: 0.75,
           }}
         >
-          <FavoriteIcon sx={{ color: 'success.main', fontSize: 20 }} />
+          <FavoriteIcon sx={{ color: 'success.main', fontSize: 22 }} />
           <Box
             component="span"
             sx={{
               color: 'success.main',
+              fontFamily: '"Syne", sans-serif',
               fontWeight: 800,
-              fontSize: '1.25rem',
+              fontSize: '1.2rem',
               textTransform: 'uppercase',
-              letterSpacing: 2,
+              letterSpacing: 3,
             }}
           >
             LIKE
@@ -59,34 +62,37 @@ export function SwipeIndicators({ x }: SwipeIndicatorsProps) {
         style={{
           opacity: dislikeOpacity,
           position: 'absolute',
-          top: 24,
-          left: 24,
+          top: 20,
+          left: 20,
           zIndex: 10,
           pointerEvents: 'none',
-          transform: 'rotate(15deg)',
+          transform: 'rotate(12deg)',
         }}
       >
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 0.5,
+            gap: 0.75,
+            bgcolor: 'rgba(239, 68, 68, 0.15)',
+            backdropFilter: 'blur(8px)',
             border: '3px solid',
             borderColor: 'error.main',
-            borderRadius: '8px',
-            px: 1.5,
-            py: 0.5,
+            borderRadius: '10px',
+            px: 2,
+            py: 0.75,
           }}
         >
-          <CloseIcon sx={{ color: 'error.main', fontSize: 20 }} />
+          <CloseIcon sx={{ color: 'error.main', fontSize: 22 }} />
           <Box
             component="span"
             sx={{
               color: 'error.main',
+              fontFamily: '"Syne", sans-serif',
               fontWeight: 800,
-              fontSize: '1.25rem',
+              fontSize: '1.2rem',
               textTransform: 'uppercase',
-              letterSpacing: 2,
+              letterSpacing: 3,
             }}
           >
             NOPE

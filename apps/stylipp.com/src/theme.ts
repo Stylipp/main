@@ -14,17 +14,26 @@ const theme = createTheme({
       dark: '#DB2777',
     },
     background: {
-      default: '#ffffff',
-      paper: '#F8F9FC',
+      default: '#FAFAFA',
+      paper: '#FFFFFF',
     },
     text: {
       primary: '#1a1a2e',
       secondary: '#64748b',
     },
+    success: {
+      main: '#22C55E',
+      dark: '#16A34A',
+    },
+    error: {
+      main: '#EF4444',
+      dark: '#DC2626',
+    },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Arial", sans-serif',
+    fontFamily: '"Manrope", "Inter", "Roboto", sans-serif',
     h1: {
+      fontFamily: '"Syne", "Manrope", sans-serif',
       fontWeight: 700,
       fontSize: '3.5rem',
       lineHeight: 1.1,
@@ -33,6 +42,7 @@ const theme = createTheme({
       },
     },
     h2: {
+      fontFamily: '"Syne", "Manrope", sans-serif',
       fontWeight: 700,
       fontSize: '2.5rem',
       '@media (max-width:600px)': {
@@ -40,6 +50,7 @@ const theme = createTheme({
       },
     },
     h3: {
+      fontFamily: '"Syne", "Manrope", sans-serif',
       fontWeight: 600,
       fontSize: '1.75rem',
     },
@@ -48,13 +59,17 @@ const theme = createTheme({
       fontSize: '1.25rem',
       color: 'rgba(255,255,255,0.7)',
     },
+    h6: {
+      fontFamily: '"Syne", "Manrope", sans-serif',
+      fontWeight: 700,
+    },
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 8,
+          borderRadius: 12,
           fontWeight: 600,
         },
       },

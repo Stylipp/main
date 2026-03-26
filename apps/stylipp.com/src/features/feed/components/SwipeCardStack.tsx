@@ -28,7 +28,6 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
         const card = cards[currentIndex]
         if (!card) return
 
-        // Set exitX BEFORE advanceCard so the exiting card reads the correct direction
         setExitX(direction === 'right' ? 300 : -300)
 
         const action: SwipeAction = direction === 'right' ? 'like' : 'dislike'
@@ -53,7 +52,8 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: { xs: 480, md: 560 },
+          width: '100%',
+          height: '100%',
           overflow: 'visible',
         }}
       >
@@ -65,17 +65,17 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
                 position: 'absolute',
                 zIndex: 3 - i,
               }}
-              initial={{ scale: 0.9, y: 16 }}
+              initial={{ scale: 0.9, y: 20 }}
               animate={{
-                scale: 1 - i * 0.05,
-                y: i * 8,
+                scale: 1 - i * 0.04,
+                y: i * 10,
                 transition: { type: 'spring', stiffness: 300, damping: 25 },
               }}
               exit={{
                 x: exitX,
                 opacity: 0,
-                rotate: exitX > 0 ? 20 : -20,
-                transition: { duration: 0.3 },
+                rotate: exitX > 0 ? 18 : -18,
+                transition: { duration: 0.3, ease: 'easeIn' },
               }}
             >
               <SwipeCard item={card} isTop={i === 0} onSwipe={handleSwipe} exitX={exitX} />

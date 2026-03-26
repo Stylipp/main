@@ -32,7 +32,8 @@ class FeedbackService:
 
         Args:
             user_id: The authenticated user's UUID.
-            product_id_external: The product's external_id (Qdrant point ID).
+            product_id_external: The product's UUID (primary key) as returned
+                by the feed endpoint.
             action: The feedback action string (like, dislike, save).
             session: Async SQLAlchemy database session.
 
@@ -40,17 +41,20 @@ class FeedbackService:
             The created UserInteraction record.
 
         Raises:
-            ValueError: If no product is found with the given external_id.
+            ValueError: If no product is found with the given id.
         """
-        # Lookup product by external_id to get the UUID for FK
-        stmt = select(Product).where(Product.external_id == product_id_external)
+        # Lookup product by primary key UUID (the feed endpoint returns Product.id)
+        try:
+            product_uuid = UUID(product_id_external)
+        except ValueError:
+            raise ValueError(f"Invalid product id: {product_id_external}")
+
+        stmt = select(Product).where(Product.id == product_uuid)
         result = await session.execute(stmt)
         product = result.scalar_one_or_none()
 
         if product is None:
-            raise ValueError(
-                f"Product not found with external_id: {product_id_external}"
-            )
+            raise ValueError(f"Product not found with id: {product_id_external}")
 
         # Create interaction record (no uniqueness constraint — users can
         # interact with the same product multiple times)
