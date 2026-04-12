@@ -563,7 +563,9 @@ class FeedService:
                 )
             ]
 
-        diversity_filter = Filter(should=cluster_should, must=must, must_not=must_not or None)
+        diversity_filter = Filter(
+            should=cluster_should, must=must, must_not=must_not or None
+        )
 
         # Retrieve diversity candidates
         diversity_candidates = await self._qdrant.search(

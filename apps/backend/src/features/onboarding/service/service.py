@@ -352,7 +352,9 @@ class OnboardingService:
         calibration_interaction_count = len(request.liked_product_ids) + len(
             request.disliked_product_ids
         )
-        user.interaction_count = max(user.interaction_count, calibration_interaction_count)
+        user.interaction_count = max(
+            user.interaction_count, calibration_interaction_count
+        )
         user.profile_version += 1
         user.last_profile_update_at = datetime.now(timezone.utc)
         user.profile_confidence = compute_profile_confidence(user.interaction_count)

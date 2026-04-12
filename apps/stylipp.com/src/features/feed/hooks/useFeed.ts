@@ -45,8 +45,9 @@ export function useFeed(category: FeedCategory = 'all') {
       const message = err instanceof Error ? err.message : 'Failed to load feed'
       setError(message)
     } finally {
-      if (requestId !== loadRequestId.current) return
-      setLoading(false)
+      if (requestId === loadRequestId.current) {
+        setLoading(false)
+      }
     }
   }, [category, setCards, setLoading, setError])
 
@@ -71,9 +72,10 @@ export function useFeed(category: FeedCategory = 'all') {
           setError(message)
         })
         .finally(() => {
-          if (requestId !== loadRequestId.current) return
-          setLoading(false)
-          isFetchingMore.current = false
+          if (requestId === loadRequestId.current) {
+            setLoading(false)
+            isFetchingMore.current = false
+          }
         })
     }
   }, [remaining, hasMore, isLoading, nextCursor, appendCards, category, setLoading, setError])

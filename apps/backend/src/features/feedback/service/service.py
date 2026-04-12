@@ -72,9 +72,7 @@ class FeedbackService:
         user = user_result.scalar_one_or_none()
         if user is not None:
             user.interaction_count += 1
-            user.profile_confidence = compute_profile_confidence(
-                user.interaction_count
-            )
+            user.profile_confidence = compute_profile_confidence(user.interaction_count)
 
         await session.commit()
         await session.refresh(interaction)
