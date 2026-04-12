@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from ..utils.category import ProductCategory
+
 
 class ProductCreate(BaseModel):
     """Data needed to create a product in our system."""
@@ -16,6 +18,8 @@ class ProductCreate(BaseModel):
     currency: str = "USD"
     image_url: str
     product_url: str
+    category: ProductCategory = ProductCategory.OTHER
+    raw_categories: list[str] = Field(default_factory=list)
 
 
 class ProductResponse(BaseModel):
@@ -30,6 +34,8 @@ class ProductResponse(BaseModel):
     currency: str
     image_url: str
     product_url: str
+    category: ProductCategory
+    raw_categories: list[str]
     created_at: datetime
     updated_at: datetime
 

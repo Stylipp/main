@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from ..schemas.schemas import ProductCreate
+from ..utils.category import normalize_woocommerce_categories
 from .woocommerce_client import WooProduct
 
 
@@ -33,6 +34,10 @@ class ProductTransformer:
         if not image_url:
             return None
 
+        category, raw_categories = normalize_woocommerce_categories(
+            woo_product.categories
+        )
+
         return ProductCreate(
             external_id=str(woo_product.id),
             store_id=self.store_id,
@@ -44,4 +49,6 @@ class ProductTransformer:
             currency=self.default_currency,
             image_url=image_url,
             product_url=woo_product.permalink,
+            category=category,
+            raw_categories=raw_categories,
         )

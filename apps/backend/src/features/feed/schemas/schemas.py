@@ -30,6 +30,7 @@ class FeedItem(BaseModel):
     currency: str
     image_url: str
     product_url: str
+    category: str
     score: float
     explanation: str
 
@@ -50,3 +51,4 @@ class FeedResponse(BaseModel):
     next_cursor: str | None
     has_more: bool
     total_in_batch: int
+    active_category: str | None = None

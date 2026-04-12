@@ -41,6 +41,8 @@ class ProductRepository:
             currency=data.currency,
             image_url=data.image_url,
             product_url=data.product_url,
+            category=data.category.value,
+            raw_categories=data.raw_categories,
         )
         self.session.add(product)
         await self.session.flush()

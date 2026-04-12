@@ -1,7 +1,8 @@
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Index, Numeric, String, Text
+from sqlalchemy import Index, Numeric, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.models.base import Base
@@ -18,9 +19,16 @@ class Product(Base):
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     image_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     product_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    category: Mapped[str] = mapped_column(
+        String(32), default="other", server_default="other", nullable=False
+    )
+    raw_categories: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb"), nullable=False
+    )
 
     __table_args__ = (
         Index("ix_products_external_id", "external_id"),
         Index("ix_products_store_id", "store_id"),
+        Index("ix_products_category", "category"),
         Index("ix_products_created_at", "created_at"),
     )

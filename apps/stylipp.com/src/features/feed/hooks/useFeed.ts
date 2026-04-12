@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { useSwipeStore, currentCard, remainingCards } from '../stores/swipeStore'
 import { fetchFeed } from '../services/feedbackService'
-import type { FeedItem } from '../types/swipe'
+import type { FeedCategory, FeedItem } from '../types/swipe'
 
 function prefetchImages(cards: FeedItem[], startIndex: number, count: number) {
   for (let i = startIndex; i < Math.min(startIndex + count, cards.length); i++) {
@@ -10,7 +10,7 @@ function prefetchImages(cards: FeedItem[], startIndex: number, count: number) {
   }
 }
 
-export function useFeed() {
+export function useFeed(category: FeedCategory = 'all') {
   const cards = useSwipeStore((s) => s.cards)
   const current = useSwipeStore(currentCard)
   const remaining = useSwipeStore(remainingCards)
@@ -25,52 +25,58 @@ export function useFeed() {
   const setLoading = useSwipeStore((s) => s.setLoading)
   const setError = useSwipeStore((s) => s.setError)
 
-  const mountGuard = useRef(false)
   const isFetchingMore = useRef(false)
+  const loadRequestId = useRef(0)
 
   const loadInitial = useCallback(async () => {
+    const requestId = ++loadRequestId.current
+    isFetchingMore.current = false
     setLoading(true)
     setError(null)
+    setCards([], null, true)
     try {
-      const response = await fetchFeed(undefined, 20)
+      const response = await fetchFeed(undefined, 20, category)
+      if (requestId !== loadRequestId.current) return
       setCards(response.items, response.next_cursor, response.has_more)
       // Prefetch images for first 3 cards
       prefetchImages(response.items, 0, 3)
     } catch (err) {
+      if (requestId !== loadRequestId.current) return
       const message = err instanceof Error ? err.message : 'Failed to load feed'
       setError(message)
     } finally {
+      if (requestId !== loadRequestId.current) return
       setLoading(false)
     }
-  }, [setCards, setLoading, setError])
+  }, [category, setCards, setLoading, setError])
 
-  // Initial fetch on mount
   useEffect(() => {
-    if (!mountGuard.current) {
-      mountGuard.current = true
-      loadInitial()
-    }
+    void loadInitial()
   }, [loadInitial])
 
   // Prefetch next page when running low on cards
   useEffect(() => {
     if (remaining <= 5 && hasMore && !isLoading && !isFetchingMore.current && nextCursor) {
       isFetchingMore.current = true
+      const requestId = loadRequestId.current
       setLoading(true)
-      fetchFeed(nextCursor, 20)
+      fetchFeed(nextCursor, 20, category)
         .then((response) => {
+          if (requestId !== loadRequestId.current) return
           appendCards(response.items, response.next_cursor, response.has_more)
         })
         .catch((err) => {
+          if (requestId !== loadRequestId.current) return
           const message = err instanceof Error ? err.message : 'Failed to load more items'
           setError(message)
         })
         .finally(() => {
+          if (requestId !== loadRequestId.current) return
           setLoading(false)
           isFetchingMore.current = false
         })
     }
-  }, [remaining, hasMore, isLoading, nextCursor, appendCards, setLoading, setError])
+  }, [remaining, hasMore, isLoading, nextCursor, appendCards, category, setLoading, setError])
 
   // Prefetch images for upcoming cards
   useEffect(() => {
@@ -80,8 +86,7 @@ export function useFeed() {
   }, [currentIndex, cards])
 
   const refetch = useCallback(() => {
-    mountGuard.current = false
-    loadInitial()
+    void loadInitial()
   }, [loadInitial])
 
   return {

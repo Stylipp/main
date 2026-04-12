@@ -7,6 +7,11 @@ export interface AuthUser {
   email: string
   display_name: string | null
   onboarding_completed: boolean
+  interaction_count: number
+  profile_version: number
+  last_profile_update_at: string | null
+  profile_confidence: number
+  profile_source: string | null
 }
 
 interface AuthState {

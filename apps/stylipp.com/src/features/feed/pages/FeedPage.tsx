@@ -1,10 +1,12 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import Box from '@mui/material/Box'
+import Chip from '@mui/material/Chip'
 import Typography from '@mui/material/Typography'
 import Skeleton from '@mui/material/Skeleton'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Snackbar from '@mui/material/Snackbar'
+import Stack from '@mui/material/Stack'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import { SwipeCardStack, type SwipeCardStackRef } from '../components/SwipeCardStack'
 import { SwipeActions } from '../components/SwipeActions'
@@ -12,9 +14,17 @@ import { FeedEmptyState } from '../components/FeedEmptyState'
 import { useFeed } from '../hooks/useFeed'
 import { useFeedbackSubmit } from '../hooks/useFeedbackSubmit'
 import { useSwipeStore, canUndo as canUndoSelector } from '../stores/swipeStore'
+import {
+  FEED_CATEGORY_OPTIONS,
+  type FeedCategory,
+  formatCategoryLabel,
+} from '../types/swipe'
 
 export default function FeedPage() {
-  const { currentCard, remainingCards, isLoading, error, hasMore, refetch } = useFeed()
+  const [selectedCategory, setSelectedCategory] = useState<FeedCategory>('all')
+  const { currentCard, remainingCards, isLoading, error, hasMore, refetch } = useFeed(
+    selectedCategory
+  )
   const { submitFeedback, undoLastSwipe } = useFeedbackSubmit()
   const userCanUndo = useSwipeStore(canUndoSelector)
   const cards = useSwipeStore((s) => s.cards)
@@ -105,6 +115,48 @@ export default function FeedPage() {
             sx={{ position: 'absolute', right: 20, color: 'primary.light' }}
           />
         )}
+      </Box>
+
+      <Box sx={{ px: 2, pb: 1, flexShrink: 0 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            overflowX: 'auto',
+            pb: 0.5,
+            '&::-webkit-scrollbar': { display: 'none' },
+            scrollbarWidth: 'none',
+          }}
+        >
+          {FEED_CATEGORY_OPTIONS.map((option) => (
+            <Chip
+              key={option.value}
+              label={option.label}
+              clickable
+              onClick={() => setSelectedCategory(option.value)}
+              color={selectedCategory === option.value ? 'primary' : 'default'}
+              variant={selectedCategory === option.value ? 'filled' : 'outlined'}
+              sx={{
+                borderRadius: '999px',
+                fontWeight: 600,
+                flexShrink: 0,
+              }}
+            />
+          ))}
+        </Stack>
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            mt: 0.5,
+            color: 'text.secondary',
+            fontWeight: 500,
+          }}
+        >
+          {selectedCategory === 'all'
+            ? 'Showing your full personalized mix'
+            : `Showing ${formatCategoryLabel(selectedCategory)} matched to your taste`}
+        </Typography>
       </Box>
 
       {/* Main card area — takes all remaining space */}

@@ -25,6 +25,7 @@ from src.core.qdrant import get_qdrant_client
 from src.features.feed.schemas.schemas import FeedItem, FeedResponse
 from src.features.feed.service.feed_service import FeedService
 from src.features.feed.service.ranking_service import RankedCandidate
+from src.features.products.utils import ProductCategory
 from src.models.product import Product
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,7 @@ def _select_explanation(candidate: RankedCandidate) -> str:
 async def get_feed(
     cursor: str | None = None,
     page_size: int = Query(default=20, ge=1, le=50),
+    category: ProductCategory | None = Query(default=None),
     user_id: UUID = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
@@ -151,6 +153,7 @@ async def get_feed(
             user_id=str(user_id),
             seen_ids=[],
             session=session,
+            category=category.value if category is not None else None,
             page_size=page_size + offset,  # Fetch enough to skip offset items
         )
     except ValueError as exc:
@@ -169,6 +172,7 @@ async def get_feed(
             next_cursor=None,
             has_more=False,
             total_in_batch=total_in_batch,
+            active_category=category.value if category is not None else None,
         )
 
     # Step 4: Enrich with product metadata from PostgreSQL
@@ -206,6 +210,7 @@ async def get_feed(
                 currency=product.currency,
                 image_url=product.image_url,
                 product_url=product.product_url,
+                category=product.category,
                 score=candidate.score,
                 explanation=_select_explanation(candidate),
             )
@@ -222,4 +227,5 @@ async def get_feed(
         next_cursor=next_cursor,
         has_more=has_more,
         total_in_batch=total_in_batch,
+        active_category=category.value if category is not None else None,
     )

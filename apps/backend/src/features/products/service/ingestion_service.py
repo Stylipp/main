@@ -139,6 +139,7 @@ class IngestionService:
                         "product_id": str(product.id),
                         "store_id": product.store_id,
                         "price": float(product.price),
+                        "category": product.category,
                         "created_at": product.created_at.isoformat(),
                     },
                 )
@@ -215,6 +216,7 @@ class IngestionService:
                         "product_id": str(product.id),
                         "store_id": product.store_id,
                         "price": float(product.price),
+                        "category": product.category,
                         "created_at": product.created_at.isoformat(),
                     },
                 )
@@ -245,10 +247,20 @@ class IngestionService:
             "currency": product_data.currency,
             "image_url": product_data.image_url,
             "product_url": product_data.product_url,
+            "category": product_data.category.value,
+            "raw_categories": product_data.raw_categories,
         }
         await self.repository.update(
             product_data.external_id, product_data.store_id, update_fields
         )
+
+        payload = {
+            "product_id": str(existing.id),
+            "store_id": existing.store_id,
+            "price": float(product_data.price),
+            "category": product_data.category.value,
+            "created_at": existing.created_at.isoformat(),
+        }
 
         # 2. If image changed, re-fetch, validate, embed, and update Qdrant
         if image_changed:
@@ -284,14 +296,15 @@ class IngestionService:
                     PointStruct(
                         id=str(existing.id),
                         vector=embedding,
-                        payload={
-                            "product_id": str(existing.id),
-                            "store_id": existing.store_id,
-                            "price": float(product_data.price),
-                            "created_at": existing.created_at.isoformat(),
-                        },
+                        payload=payload,
                     )
                 ],
+            )
+        else:
+            await self.qdrant.set_payload(
+                collection_name=self.collection_name,
+                payload=payload,
+                points=[str(existing.id)],
             )
 
         return IngestionResult(success=True, product_id=existing.id, updated=True)

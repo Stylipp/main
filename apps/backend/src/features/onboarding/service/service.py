@@ -9,6 +9,7 @@ Handles the three-step onboarding flow:
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from io import BytesIO
 from uuid import UUID, uuid4
 
@@ -20,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import Settings
+from src.core.profile_state import compute_profile_confidence
 from src.features.ai.service.embedding_service import EmbeddingService
 from src.features.ai.service.quality_gate import QualityGateService
 from src.features.clustering.service.cold_start_service import ColdStartService
@@ -347,6 +349,15 @@ class OnboardingService:
 
         user.onboarding_completed = True
         user.price_profile = price_profile
+        calibration_interaction_count = len(request.liked_product_ids) + len(
+            request.disliked_product_ids
+        )
+        user.interaction_count = max(user.interaction_count, calibration_interaction_count)
+        user.profile_version += 1
+        user.last_profile_update_at = datetime.now(timezone.utc)
+        user.profile_confidence = compute_profile_confidence(user.interaction_count)
+        if user.profile_source is None:
+            user.profile_source = "onboarding"
         await session.commit()
 
         logger.info(

@@ -12,7 +12,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.profile_state import compute_profile_confidence
 from src.models.product import Product
+from src.models.user import User
 from src.models.user_interaction import UserInteraction
 
 logger = logging.getLogger(__name__)
@@ -64,6 +66,16 @@ class FeedbackService:
             action=action,
         )
         session.add(interaction)
+
+        stmt_user = select(User).where(User.id == user_id)
+        user_result = await session.execute(stmt_user)
+        user = user_result.scalar_one_or_none()
+        if user is not None:
+            user.interaction_count += 1
+            user.profile_confidence = compute_profile_confidence(
+                user.interaction_count
+            )
+
         await session.commit()
         await session.refresh(interaction)
 

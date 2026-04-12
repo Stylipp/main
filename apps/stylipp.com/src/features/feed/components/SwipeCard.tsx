@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion'
 import type { PanInfo } from 'framer-motion'
-import type { FeedItem, SwipeDirection } from '../types/swipe'
+import { formatCategoryLabel, type FeedItem, type SwipeDirection } from '../types/swipe'
 import { SwipeIndicators } from './SwipeIndicators'
 
 const SWIPE_OFFSET_THRESHOLD = 100
@@ -97,6 +97,32 @@ export function SwipeCard({ item, isTop, onSwipe, exitX }: SwipeCardProps) {
               pt: 8,
             }}
           >
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '999px',
+                bgcolor: 'rgba(255,255,255,0.16)',
+                px: 1,
+                py: 0.4,
+                mb: 1,
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.68rem',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {formatCategoryLabel(item.category)}
+              </Typography>
+            </Box>
+
             <Typography
               variant="subtitle1"
               sx={{

@@ -38,7 +38,8 @@ const initialState = {
 export const useSwipeStore = create<SwipeState>()((set) => ({
   ...initialState,
 
-  setCards: (cards, nextCursor, hasMore) => set({ cards, currentIndex: 0, nextCursor, hasMore }),
+  setCards: (cards, nextCursor, hasMore) =>
+    set({ cards, currentIndex: 0, undoStack: [], nextCursor, hasMore }),
 
   appendCards: (cards, nextCursor, hasMore) =>
     set((state) => ({

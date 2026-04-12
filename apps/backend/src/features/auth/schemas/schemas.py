@@ -20,6 +20,11 @@ class UserResponse(BaseModel):
     email: EmailStr
     display_name: str | None = None
     onboarding_completed: bool
+    interaction_count: int
+    profile_version: int
+    last_profile_update_at: datetime | None = None
+    profile_confidence: float
+    profile_source: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

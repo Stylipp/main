@@ -134,11 +134,12 @@ class FeedService:
         logger.info("Loaded %d cluster priors from Qdrant", len(priors))
         return priors
 
+    @staticmethod
     def _build_candidate_filter(
-        self,
         seen_ids: list[str],
         price_min: float,
         price_max: float,
+        category: str | None = None,
         *,
         exclude_seen: bool = True,
         apply_price: bool = True,
@@ -166,6 +167,14 @@ class FeedService:
                         gte=price_min * _PRICE_FILTER_LOW_FACTOR,
                         lte=price_max * _PRICE_FILTER_HIGH_FACTOR,
                     ),
+                )
+            )
+
+        if category is not None:
+            must.append(
+                FieldCondition(
+                    key="category",
+                    match=MatchValue(value=category),
                 )
             )
 
@@ -200,6 +209,7 @@ class FeedService:
         seen_ids: list[str],
         price_min: float,
         price_max: float,
+        category: str | None,
         page_size: int,
     ) -> list:
         """Retrieve candidates with progressive filter widening on shortfall.
@@ -214,6 +224,7 @@ class FeedService:
             seen_ids,
             price_min,
             price_max,
+            category,
             exclude_seen=True,
             apply_price=True,
         )
@@ -234,6 +245,7 @@ class FeedService:
             seen_ids,
             price_min,
             price_max,
+            category,
             exclude_seen=True,
             apply_price=False,
         )
@@ -254,6 +266,7 @@ class FeedService:
             seen_ids,
             price_min,
             price_max,
+            category,
             exclude_seen=False,
             apply_price=False,
         )
@@ -361,6 +374,7 @@ class FeedService:
         user_id: str,
         seen_ids: list[str],
         session: AsyncSession,
+        category: str | None = None,
         page_size: int = 20,
     ) -> list[RankedCandidate]:
         """Generate a ranked, diversity-injected feed for a user.
@@ -412,6 +426,7 @@ class FeedService:
             seen_ids=all_exclude_ids,
             price_min=price_min,
             price_max=price_max,
+            category=category,
             page_size=page_size,
         )
         candidates = self._prepare_candidates_for_ranking(
@@ -438,6 +453,7 @@ class FeedService:
             user_price_profile=user_price_profile,
             primary_ranked=ranked,
             seen_ids=all_exclude_ids,
+            category=category,
             page_size=page_size,
         )
 
@@ -493,6 +509,7 @@ class FeedService:
         user_price_profile: dict,
         primary_ranked: list[RankedCandidate],
         seen_ids: list[str],
+        category: str | None,
         page_size: int,
     ) -> list[RankedCandidate]:
         """Inject diversity items into the ranked feed.
@@ -537,10 +554,16 @@ class FeedService:
         if all_exclude_ids:
             must_not.append(HasIdCondition(has_id=all_exclude_ids))
 
-        diversity_filter = Filter(
-            should=cluster_should,
-            must_not=must_not or None,
-        )
+        must = None
+        if category is not None:
+            must = [
+                FieldCondition(
+                    key="category",
+                    match=MatchValue(value=category),
+                )
+            ]
+
+        diversity_filter = Filter(should=cluster_should, must=must, must_not=must_not or None)
 
         # Retrieve diversity candidates
         diversity_candidates = await self._qdrant.search(
