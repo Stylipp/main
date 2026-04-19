@@ -56,15 +56,22 @@ async def scrape_product(url: str, store: StoreConfig) -> ScrapedProduct | None:
 
         soup = BeautifulSoup(r.text, "html.parser")
 
-        jsonld_data = _extract_jsonld(soup)
+        jsonld_data, jsonld_node = _extract_jsonld(soup)
         html_data = _extract_html(soup, store)
         data = _merge_product_data(jsonld_data, html_data)
         if not data or not data.get("title"):
             return None
 
+        stable_id = _extract_stable_id(soup, jsonld_node, store)
+        if stable_id:
+            prefix = store.platform or "woo"
+            external_id = f"{prefix}_{stable_id}"
+        else:
+            external_id = f"md5_{hashlib.md5(url.encode()).hexdigest()[:16]}"
+
         return ScrapedProduct(
             url=url,
-            external_id=hashlib.md5(url.encode()).hexdigest()[:16],
+            external_id=external_id,
             title=data["title"],
             description=data.get("description"),
             price=data.get("price"),
@@ -96,10 +103,42 @@ async def scrape_batch(urls: list[str], store: StoreConfig) -> list[ScrapedProdu
     return results
 
 
+# --- Stable ID extraction ---
+
+
+def _extract_stable_id(
+    soup: BeautifulSoup, jsonld_node: dict | None, store: StoreConfig
+) -> str | None:
+    """Extract a platform-native product ID, falling back to None for md5."""
+    # 1. JSON-LD sku (cross-platform, highest reliability)
+    if jsonld_node:
+        sku = str(jsonld_node.get("sku", "")).strip()
+        if sku:
+            return sku
+
+    # 2. WooCommerce data-product_id HTML attribute
+    el = soup.find(attrs={"data-product_id": True})
+    if el:
+        pid = str(el.get("data-product_id", "")).strip()
+        if pid:
+            return pid
+
+    # 3. Shopify productGroupID from JSON-LD
+    if jsonld_node:
+        group_id = str(jsonld_node.get("productGroupID", "")).strip()
+        if group_id:
+            return group_id
+
+    return None
+
+
 # --- JSON-LD extraction ---
 
 
-def _extract_jsonld(soup: BeautifulSoup) -> dict[str, Any] | None:
+def _extract_jsonld(
+    soup: BeautifulSoup,
+) -> tuple[dict[str, Any] | None, dict | None]:
+    """Return (merged product data, raw JSON-LD node) from structured data."""
     for script in soup.find_all("script", {"type": "application/ld+json"}):
         raw = (script.string or script.get_text() or "").strip()
         if not raw:
@@ -126,8 +165,8 @@ def _extract_jsonld(soup: BeautifulSoup) -> dict[str, Any] | None:
                 "sale_price": sale_price,
                 "image_urls": images,
                 "categories": [],
-            }
-    return None
+            }, node
+    return None, None
 
 
 def _merge_product_data(
