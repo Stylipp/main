@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from enum import Enum
 from urllib.parse import unquote_plus
 
@@ -222,6 +223,7 @@ _IGNORED_CATEGORY_VALUES = {
     "all",
     "general",
     "gift ideas",
+    "home",
     "mini me",
     "mini-me",
     "new",
@@ -231,11 +233,21 @@ _IGNORED_CATEGORY_VALUES = {
     "sales",
     "uncategorized",
     "כללי",
+    "ללא קטגוריה",
+    "לא מסווג",
+    "בית",
+    "דף הבית",
 }
 
 
 def _normalize_category_value(value: str) -> str:
     decoded = unquote_plus(str(value)).strip().lower()
+    decoded = unicodedata.normalize("NFC", decoded)
+    # Normalize Hebrew geresh and all apostrophe variants to ASCII
+    decoded = decoded.replace("\u05f3", "'")  # Hebrew geresh ׳
+    decoded = decoded.replace("\u2019", "'")  # Right single quote '
+    decoded = decoded.replace("\u02bc", "'")  # Modifier letter apostrophe ʼ
+    decoded = decoded.replace("\u2018", "'")  # Left single quote '
     return re.sub(r"\s+", " ", decoded)
 
 
