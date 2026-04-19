@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (4/TBD plans complete)
+**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (5/6 plans complete)
 
 ## Current Position
 
 Phase: 17 of 17 (Scraper-to-Backend Hardening)
-Plan: 4 in current phase
+Plan: 5 of 6 in current phase
 Status: In progress
-Last activity: 2026-04-19 — Completed 17-04-PLAN.md (selective hash updates & soft-delete)
+Last activity: 2026-04-19 — Completed 17-05-PLAN.md (stable source IDs & Hebrew normalization)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (4/TBD)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (5/6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38
+- Total plans completed: 39
 - Average duration: ~8 min
-- Total execution time: ~5h 10m
+- Total execution time: ~5h 13m
 
 **By Phase:**
 
@@ -35,10 +35,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
 | 6 | 4/TBD | ~24m | ~6m |
-| 17 | 4/TBD | ~10m | ~3m |
+| 17 | 5/6 | ~13m | ~3m |
 
 **Recent Trend:**
-- Last 5 plans: 06-04, 17-01, 17-02, 17-03, 17-04
+- Last 5 plans: 17-01, 17-02, 17-03, 17-04, 17-05
 - Trend: Steady
 
 ## Accumulated Context
@@ -122,6 +122,9 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 17-04 | Soft-delete via removed_at TEXT column with ALTER TABLE migration | Backward compatible; existing DBs get column added on initialize() |
 | 17-04 | Returning products treated as changed (not new) | Triggers update flow in backend; clears removed_at in SQLite |
 | 17-04 | Selective hash update via accepted_ids set | O(1) lookups; failed products keep old hash and are retried next run |
+| 17-05 | Stable ID priority: JSON-LD sku → data-product_id → productGroupID → md5 | Cross-platform coverage; sku most reliable, HTML attribute WooCommerce-specific, productGroupID Shopify |
+| 17-05 | Platform-prefixed external_id format ({platform}_{id} or md5_{hash}) | Old bare md5 IDs grandfathered; new prefixed format won't collide |
+| 17-05 | Unicode NFC + apostrophe normalization before category token matching | Geresh (U+05F3), smart quotes normalized to ASCII; single keyword form sufficient |
 
 ### Deferred Issues
 
@@ -145,5 +148,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-19
-Stopped at: Completed 17-04 (selective hash updates & soft-delete — SyncResult accepted_ids, soft-delete mark_removed, archive notification)
+Stopped at: Completed 17-05 (stable source IDs & Hebrew normalization — platform-prefixed external_id, apostrophe normalization, junk category exclusion)
 Resume file: None
