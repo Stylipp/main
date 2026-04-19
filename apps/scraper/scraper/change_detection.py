@@ -32,12 +32,20 @@ class ChangeDetector:
                     first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
                     last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
                     last_changed_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    removed_at TEXT,
                     PRIMARY KEY (store_id, external_id)
                 )
             """)
             await db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_store ON product_hashes (store_id)"
             )
+            # Migrate existing databases: add removed_at column if missing
+            try:
+                await db.execute(
+                    "ALTER TABLE product_hashes ADD COLUMN removed_at TEXT"
+                )
+            except Exception:
+                pass  # Column already exists
             await db.commit()
 
     @staticmethod
@@ -56,24 +64,50 @@ class ChangeDetector:
         self, store_id: str, products: list[ScrapedProduct]
     ) -> ChangeReport:
         async with aiosqlite.connect(self.db_path) as db:
+            # Active products (not soft-deleted)
             cursor = await db.execute(
-                "SELECT external_id, content_hash FROM product_hashes WHERE store_id = ?",
+                "SELECT external_id, content_hash FROM product_hashes "
+                "WHERE store_id = ? AND removed_at IS NULL",
                 (store_id,),
             )
             existing = {row[0]: row[1] async for row in cursor}
 
+            # Soft-deleted products (for detecting returning products)
+            cursor = await db.execute(
+                "SELECT external_id FROM product_hashes "
+                "WHERE store_id = ? AND removed_at IS NOT NULL",
+                (store_id,),
+            )
+            removed_set = {row[0] async for row in cursor}
+
         new, changed, unchanged = [], [], 0
+        returning_ids: list[str] = []
         seen_ids = set()
 
         for p in products:
             seen_ids.add(p.external_id)
             h = self.compute_hash(p)
-            if p.external_id not in existing:
+            if p.external_id in removed_set:
+                # Product was soft-deleted but re-appeared — treat as changed
+                changed.append(p)
+                returning_ids.append(p.external_id)
+            elif p.external_id not in existing:
                 new.append(p)
             elif existing[p.external_id] != h:
                 changed.append(p)
             else:
                 unchanged += 1
+
+        # Clear removed_at for returning products
+        if returning_ids:
+            async with aiosqlite.connect(self.db_path) as db:
+                placeholders = ",".join("?" for _ in returning_ids)
+                await db.execute(
+                    f"UPDATE product_hashes SET removed_at = NULL "
+                    f"WHERE store_id = ? AND external_id IN ({placeholders})",
+                    [store_id, *returning_ids],
+                )
+                await db.commit()
 
         removed_ids = [eid for eid in existing if eid not in seen_ids]
 
@@ -120,7 +154,8 @@ class ChangeDetector:
         async with aiosqlite.connect(self.db_path) as db:
             placeholders = ",".join("?" for _ in external_ids)
             await db.execute(
-                f"DELETE FROM product_hashes WHERE store_id = ? AND external_id IN ({placeholders})",
+                f"UPDATE product_hashes SET removed_at = datetime('now') "
+                f"WHERE store_id = ? AND external_id IN ({placeholders})",
                 [store_id, *external_ids],
             )
             await db.commit()

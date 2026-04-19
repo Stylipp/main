@@ -58,16 +58,20 @@ async def run_store(
             return stats
 
         if report.new:
-            await sync.push_products(report.new)
-        if report.changed:
-            await sync.update_products(report.changed)
+            new_result = await sync.push_products(report.new)
+            accepted_new = [p for p in report.new if p.external_id in set(new_result.accepted_ids)]
+            if accepted_new:
+                await detector.update_hashes(store.id, accepted_new)
 
-        # Update hashes after successful sync
-        all_synced = report.new + report.changed
-        if all_synced:
-            await detector.update_hashes(store.id, all_synced)
+        if report.changed:
+            changed_result = await sync.update_products(report.changed)
+            accepted_changed = [p for p in report.changed if p.external_id in set(changed_result.accepted_ids)]
+            if accepted_changed:
+                await detector.update_hashes(store.id, accepted_changed)
+
         if report.removed_ids:
             await detector.mark_removed(store.id, report.removed_ids)
+            await sync.archive_products(store.id, report.removed_ids)
 
     except SiteBlockedError:
         stats["error"] = "403 Forbidden — Cloudflare/WAF blocks this server's IP"
