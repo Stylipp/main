@@ -205,6 +205,9 @@ class FeedService:
         must: list = []
         must_not: list = []
 
+        # Always exclude archived products from feed
+        must_not.append(FieldCondition(key="archived", match=MatchValue(value=True)))
+
         if exclude_seen and seen_ids:
             must_not.append(HasIdCondition(has_id=seen_ids))
 

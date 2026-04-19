@@ -7,7 +7,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
-from src.core.qdrant import ensure_cluster_collection, ensure_user_profiles_collection
+from src.core.qdrant import (
+    ensure_cluster_collection,
+    ensure_products_payload_indexes,
+    ensure_user_profiles_collection,
+)
 from src.features.ai.router.router import router as ai_router
 from src.features.ai.service.embedding_service import EmbeddingService
 from src.features.auth.router.router import router as auth_router
@@ -61,6 +65,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("User profiles collection ready")
     except Exception:
         logger.exception("Failed to ensure user profiles collection")
+
+    # Ensure payload indexes for filtering
+    try:
+        await ensure_products_payload_indexes()
+        logger.info("Products payload indexes ready")
+    except Exception:
+        logger.exception("Failed to ensure products payload indexes")
 
     yield
 

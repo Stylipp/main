@@ -1,5 +1,5 @@
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import Distance, PayloadSchemaType, VectorParams
 
 from src.core.config import get_settings
 
@@ -93,6 +93,21 @@ async def ensure_user_profiles_collection() -> None:
             ),
             on_disk_payload=True,
         )
+
+
+async def ensure_products_payload_indexes() -> None:
+    """Create payload indexes on the products collection for filter performance.
+
+    Idempotent — Qdrant ignores if the index already exists.
+    """
+    settings = get_settings()
+    client = await get_qdrant_client()
+
+    await client.create_payload_index(
+        collection_name=settings.qdrant_collection,
+        field_name="archived",
+        field_schema=PayloadSchemaType.BOOL,
+    )
 
 
 async def health_check() -> bool:
