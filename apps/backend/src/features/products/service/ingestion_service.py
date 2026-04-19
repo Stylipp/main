@@ -186,6 +186,21 @@ class IngestionService:
         )
         if existing is None:
             return await self._ingest_new(product_data)
+
+        # Un-archive returning products instead of duplicating
+        if existing.archived_at is not None:
+            logger.info(
+                "Un-archiving returning product %s/%s",
+                product_data.store_id,
+                product_data.external_id,
+            )
+            existing.archived_at = None
+            await self.qdrant.set_payload(
+                collection_name=self.collection_name,
+                payload={"archived": False},
+                points=[str(existing.id)],
+            )
+
         return await self._update_existing(existing, product_data)
 
     async def _ingest_new(self, product_data: ProductCreate) -> IngestionResult:
