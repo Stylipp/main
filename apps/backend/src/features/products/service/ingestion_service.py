@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -19,9 +20,11 @@ from uuid import UUID
 import httpx
 from PIL import Image
 from qdrant_client.models import PointStruct
+from sqlalchemy import select
 
 if TYPE_CHECKING:
     from qdrant_client import AsyncQdrantClient
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from ....models.product import Product
     from ...ai.service.embedding_service import EmbeddingService
@@ -323,6 +326,53 @@ class IngestionService:
             )
 
         return IngestionResult(success=True, product_id=existing.id, updated=True)
+
+    async def archive_products(
+        self,
+        external_ids: list[str],
+        store_id: str,
+        session: AsyncSession,
+    ) -> list[str]:
+        """Soft-delete products by setting archived_at and flagging in Qdrant.
+
+        Args:
+            external_ids: External IDs of products to archive.
+            store_id: Store the products belong to.
+            session: Async SQLAlchemy session for the query.
+
+        Returns:
+            List of external_ids that were actually archived.
+        """
+        from ....models.product import Product as ProductModel
+
+        result = await session.execute(
+            select(ProductModel).where(
+                ProductModel.external_id.in_(external_ids),
+                ProductModel.store_id == store_id,
+                ProductModel.archived_at.is_(None),
+            )
+        )
+        products = list(result.scalars().all())
+
+        if not products:
+            logger.info("No active products found to archive for store %s", store_id)
+            return []
+
+        now = datetime.now(timezone.utc)
+        archived_ids: list[str] = []
+
+        for product in products:
+            product.archived_at = now
+            archived_ids.append(product.external_id)
+
+            await self.qdrant.set_payload(
+                collection_name=self.collection_name,
+                payload={"archived": True},
+                points=[str(product.id)],
+            )
+
+        logger.info("Archived %d products for store %s", len(archived_ids), store_id)
+        return archived_ids
 
     async def _fetch_image(self, url: str) -> tuple[Image.Image, int]:
         """Fetch image from URL, return PIL Image and file size in bytes.

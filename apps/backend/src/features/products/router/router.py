@@ -1,10 +1,11 @@
-"""Products feature router with ingestion and query endpoints.
+"""Products feature router with ingestion, query, and archival endpoints.
 
 Endpoints:
-    GET  /api/products/health       - Health check for products feature
-    GET  /api/products/count        - Get total product count from PostgreSQL
-    POST /api/products/ingest       - Ingest a single product (testing/manual)
-    POST /api/products/ingest/batch - Batch ingest/upsert products from scraper
+    GET  /api/products/health        - Health check for products feature
+    GET  /api/products/count         - Get total product count from PostgreSQL
+    POST /api/products/ingest        - Ingest a single product (testing/manual)
+    POST /api/products/ingest/batch  - Batch ingest/upsert products from scraper
+    POST /api/products/archive/batch - Batch archive (soft-delete) products
 """
 
 from __future__ import annotations
@@ -22,6 +23,8 @@ from ....core.qdrant import get_qdrant_client
 from ....models.product import Product
 from ...ai.service.quality_gate import QualityGateService
 from ..schemas.schemas import (
+    BatchArchiveRequest,
+    BatchArchiveResponse,
     BatchIngestRequest,
     BatchIngestResponse,
     ProductCreate,
@@ -219,3 +222,35 @@ async def ingest_batch(
         )
 
     return response
+
+
+@router.post("/archive/batch")
+async def archive_batch(
+    request_body: BatchArchiveRequest,
+    service: Annotated[IngestionService, Depends(get_ingestion_service)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> BatchArchiveResponse:
+    """Batch archive products (soft-delete).
+
+    Sets archived_at timestamp in PostgreSQL and archived=True payload
+    flag in Qdrant. Does not hard-delete any data.
+
+    Args:
+        request_body: Store ID and external IDs to archive.
+        service: IngestionService with all dependencies.
+        session: Async SQLAlchemy session for commit.
+
+    Returns:
+        BatchArchiveResponse with count and IDs of archived products.
+    """
+    archived_ids = await service.archive_products(
+        external_ids=request_body.external_ids,
+        store_id=request_body.store_id,
+        session=session,
+    )
+    await session.commit()
+
+    return BatchArchiveResponse(
+        archived_count=len(archived_ids),
+        archived_ids=archived_ids,
+    )

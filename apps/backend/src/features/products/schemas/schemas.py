@@ -74,3 +74,17 @@ class BatchIngestResponse(BaseModel):
     failed: int
     accepted_ids: list[str] = Field(default_factory=list)
     rejected: list[RejectedItem] = Field(default_factory=list)
+
+
+class BatchArchiveRequest(BaseModel):
+    """Request body for batch product archival."""
+
+    store_id: str
+    external_ids: list[str]
+
+
+class BatchArchiveResponse(BaseModel):
+    """Response from a batch product archival."""
+
+    archived_count: int
+    archived_ids: list[str]
