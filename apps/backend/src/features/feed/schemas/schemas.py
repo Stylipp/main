@@ -4,7 +4,15 @@ Defines FeedItem (individual product in the feed) and FeedResponse
 (paginated feed response with cursor-based pagination).
 """
 
+from enum import Enum
+
 from pydantic import BaseModel, ConfigDict
+
+
+class FeedMode(str, Enum):
+    TRENDING = "trending"
+    HYBRID = "hybrid"
+    PERSONALIZED = "personalized"
 
 
 class FeedItem(BaseModel):
@@ -18,10 +26,11 @@ class FeedItem(BaseModel):
         image_url: URL to the product image.
         product_url: URL to the product page.
         score: Final ranking score from multi-factor scoring.
-        explanation: One of 3 explanation templates per PROJECT.md:
+        explanation: Template explanation for why the item appears in the feed:
             - "Similar to your recent likes"
             - "Matches your style"
             - "Within your usual price range"
+            - "Trending with other shoppers"
     """
 
     product_id: str
@@ -52,3 +61,4 @@ class FeedResponse(BaseModel):
     has_more: bool
     total_in_batch: int
     active_category: str | None = None
+    feed_mode: FeedMode

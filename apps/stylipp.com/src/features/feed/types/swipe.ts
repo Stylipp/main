@@ -10,6 +10,7 @@ export type ProductCategory =
   | 'accessories'
   | 'other'
 export type FeedCategory = 'all' | ProductCategory
+export type FeedMode = 'trending' | 'hybrid' | 'personalized'
 
 export const FEED_CATEGORY_OPTIONS: { value: FeedCategory; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -46,6 +47,7 @@ export interface FeedResponse {
   has_more: boolean
   total_in_batch: number
   active_category: ProductCategory | null
+  feed_mode: FeedMode
 }
 
 export interface SwipeRecord {

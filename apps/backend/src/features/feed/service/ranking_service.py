@@ -30,6 +30,7 @@ class RankedCandidate:
     cluster_prior_score: float
     price_score: float
     freshness_score: float
+    source: str = "personalized"
 
 
 def rank_candidates(

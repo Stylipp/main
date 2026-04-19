@@ -1,7 +1,7 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { useSwipeStore, currentCard, remainingCards } from '../stores/swipeStore'
 import { fetchFeed } from '../services/feedbackService'
-import type { FeedCategory, FeedItem } from '../types/swipe'
+import type { FeedCategory, FeedItem, FeedMode } from '../types/swipe'
 
 function prefetchImages(cards: FeedItem[], startIndex: number, count: number) {
   for (let i = startIndex; i < Math.min(startIndex + count, cards.length); i++) {
@@ -11,6 +11,7 @@ function prefetchImages(cards: FeedItem[], startIndex: number, count: number) {
 }
 
 export function useFeed(category: FeedCategory = 'all') {
+  const [feedMode, setFeedMode] = useState<FeedMode>('trending')
   const cards = useSwipeStore((s) => s.cards)
   const current = useSwipeStore(currentCard)
   const remaining = useSwipeStore(remainingCards)
@@ -38,12 +39,14 @@ export function useFeed(category: FeedCategory = 'all') {
       const response = await fetchFeed(undefined, 20, category)
       if (requestId !== loadRequestId.current) return
       setCards(response.items, response.next_cursor, response.has_more)
+      setFeedMode(response.feed_mode)
       // Prefetch images for first 3 cards
       prefetchImages(response.items, 0, 3)
     } catch (err) {
       if (requestId !== loadRequestId.current) return
       const message = err instanceof Error ? err.message : 'Failed to load feed'
       setError(message)
+      setFeedMode('trending')
     } finally {
       if (requestId === loadRequestId.current) {
         setLoading(false)
@@ -65,6 +68,7 @@ export function useFeed(category: FeedCategory = 'all') {
         .then((response) => {
           if (requestId !== loadRequestId.current) return
           appendCards(response.items, response.next_cursor, response.has_more)
+          setFeedMode(response.feed_mode)
         })
         .catch((err) => {
           if (requestId !== loadRequestId.current) return
@@ -97,6 +101,7 @@ export function useFeed(category: FeedCategory = 'all') {
     isLoading,
     error,
     hasMore,
+    feedMode,
     refetch,
   }
 }

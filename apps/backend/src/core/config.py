@@ -31,6 +31,9 @@ class Settings(BaseSettings):
 
     # User profiles
     user_profiles_collection: str = "user_profiles"
+    feed_hybrid_confidence_threshold: float = 0.6
+    feed_hybrid_personalized_ratio: float = 0.6
+    feed_personalized_discovery_count: int = 2
 
     # WooCommerce partner store (optional - for future partner integration)
     woo_store_url: str | None = None

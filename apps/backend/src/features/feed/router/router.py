@@ -36,6 +36,7 @@ router = APIRouter(prefix="/feed", tags=["Feed"])
 _EXPLANATION_SIMILAR = "Similar to your recent likes"
 _EXPLANATION_STYLE = "Matches your style"
 _EXPLANATION_PRICE = "Within your usual price range"
+_EXPLANATION_TRENDING = "Trending with other shoppers"
 
 
 def _encode_cursor(offset: int, batch_id: str) -> str:
@@ -79,7 +80,8 @@ def _decode_cursor(cursor: str) -> tuple[int, str]:
 def _select_explanation(candidate: RankedCandidate) -> str:
     """Select an explanation template based on the dominant scoring factor.
 
-    Simple rule per PROJECT.md (3 templates only, no category labeling):
+    Simple rule with a trending fallback:
+    - If candidate came from trending retrieval -> trending explanation
     - If price_score is the highest non-cosine factor -> price explanation
     - If cluster_prior_score is highest non-cosine -> style explanation
     - Default -> similarity explanation
@@ -88,8 +90,11 @@ def _select_explanation(candidate: RankedCandidate) -> str:
         candidate: Ranked candidate with individual score components.
 
     Returns:
-        One of the 3 explanation template strings.
+        One explanation template string.
     """
+    if candidate.source == "trending":
+        return _EXPLANATION_TRENDING
+
     if (
         candidate.price_score >= candidate.cluster_prior_score
         and candidate.price_score >= candidate.freshness_score
@@ -127,7 +132,6 @@ async def get_feed(
 
     Raises:
         HTTPException 400: Invalid cursor format.
-        HTTPException 404: User vector not found (onboarding incomplete).
     """
     # Step 1: Decode cursor if provided
     offset = 0
@@ -148,23 +152,17 @@ async def get_feed(
     feed_service = FeedService(qdrant_client=qdrant_client, settings=settings)
 
     # Step 3: Generate feed (retrieve, rank, inject diversity)
-    try:
-        ranked_candidates = await feed_service.generate_feed(
-            user_id=str(user_id),
-            seen_ids=[],
-            session=session,
-            category=category.value if category is not None else None,
-            page_size=page_size + offset,  # Fetch enough to skip offset items
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        )
+    feed_result = await feed_service.generate_feed(
+        user_id=str(user_id),
+        seen_ids=[],
+        session=session,
+        category=category.value if category is not None else None,
+        page_size=page_size + offset,  # Fetch enough to skip offset items
+    )
 
     # Apply offset for cursor pagination
-    total_in_batch = len(ranked_candidates)
-    paged_candidates = ranked_candidates[offset : offset + page_size]
+    total_in_batch = len(feed_result.candidates)
+    paged_candidates = feed_result.candidates[offset : offset + page_size]
 
     if not paged_candidates:
         return FeedResponse(
@@ -173,6 +171,7 @@ async def get_feed(
             has_more=False,
             total_in_batch=total_in_batch,
             active_category=category.value if category is not None else None,
+            feed_mode=feed_result.feed_mode,
         )
 
     # Step 4: Enrich with product metadata from PostgreSQL
@@ -228,4 +227,5 @@ async def get_feed(
         has_more=has_more,
         total_in_batch=total_in_batch,
         active_category=category.value if category is not None else None,
+        feed_mode=feed_result.feed_mode,
     )

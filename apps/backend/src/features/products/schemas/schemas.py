@@ -56,6 +56,15 @@ class BatchIngestRequest(BaseModel):
     products: list[ProductCreate]
 
 
+class RejectedItem(BaseModel):
+    """A product that failed batch ingestion."""
+
+    external_id: str
+    store_id: str
+    error: str
+    retryable: bool
+
+
 class BatchIngestResponse(BaseModel):
     """Response from a batch product ingestion."""
 
@@ -63,4 +72,5 @@ class BatchIngestResponse(BaseModel):
     created: int
     updated: int
     failed: int
-    errors: list[dict] = Field(default_factory=list)
+    accepted_ids: list[str] = Field(default_factory=list)
+    rejected: list[RejectedItem] = Field(default_factory=list)

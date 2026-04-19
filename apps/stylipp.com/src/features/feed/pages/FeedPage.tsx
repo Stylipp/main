@@ -22,7 +22,7 @@ import {
 
 export default function FeedPage() {
   const [selectedCategory, setSelectedCategory] = useState<FeedCategory>('all')
-  const { currentCard, remainingCards, isLoading, error, hasMore, refetch } = useFeed(
+  const { currentCard, remainingCards, isLoading, error, hasMore, feedMode, refetch } = useFeed(
     selectedCategory
   )
   const { submitFeedback, undoLastSwipe } = useFeedbackSubmit()
@@ -70,6 +70,12 @@ export default function FeedPage() {
   const isInitialLoad = isLoading && cards.length === 0
   const isFetchingMore = isLoading && cards.length > 0
   const noCards = !isInitialLoad && remainingCards === 0 && !hasMore && !isLoading
+  const feedModeLabel =
+    feedMode === 'trending'
+      ? 'Trending right now'
+      : feedMode === 'hybrid'
+        ? 'Personalizing from your swipes'
+        : 'Fully personalized'
 
   return (
     <Box
@@ -154,8 +160,8 @@ export default function FeedPage() {
           }}
         >
           {selectedCategory === 'all'
-            ? 'Showing your full personalized mix'
-            : `Showing ${formatCategoryLabel(selectedCategory)} matched to your taste`}
+            ? feedModeLabel
+            : `${feedModeLabel} in ${formatCategoryLabel(selectedCategory)}`}
         </Typography>
       </Box>
 
