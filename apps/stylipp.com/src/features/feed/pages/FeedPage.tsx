@@ -14,17 +14,12 @@ import { FeedEmptyState } from '../components/FeedEmptyState'
 import { useFeed } from '../hooks/useFeed'
 import { useFeedbackSubmit } from '../hooks/useFeedbackSubmit'
 import { useSwipeStore, canUndo as canUndoSelector } from '../stores/swipeStore'
-import {
-  FEED_CATEGORY_OPTIONS,
-  type FeedCategory,
-  formatCategoryLabel,
-} from '../types/swipe'
+import { FEED_CATEGORY_OPTIONS, type FeedCategory, formatCategoryLabel } from '../types/swipe'
 
 export default function FeedPage() {
   const [selectedCategory, setSelectedCategory] = useState<FeedCategory>('all')
-  const { currentCard, remainingCards, isLoading, error, hasMore, feedMode, refetch } = useFeed(
-    selectedCategory
-  )
+  const { currentCard, remainingCards, isLoading, error, hasMore, feedMode, refetch } =
+    useFeed(selectedCategory)
   const { submitFeedback, undoLastSwipe } = useFeedbackSubmit()
   const userCanUndo = useSwipeStore(canUndoSelector)
   const cards = useSwipeStore((s) => s.cards)

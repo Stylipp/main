@@ -40,7 +40,7 @@
 
 - `[ ]` Scraper-to-backend hardening for categories, sync correctness, and removals
 - `[ ]` Real learning loop: swipes update the actual user vector
-- `[ ]` Feed modes: `trending`, `hybrid`, `personalized`
+- `[-]` Feed modes: `trending`, `hybrid`, `personalized` are built in code and tested locally, but still need push/deploy and manual verification
 - `[ ]` Auto cold-start from interactions without photo upload
 - `[ ]` Exposure logging
 - `[ ]` Richer feedback signals
@@ -79,6 +79,9 @@
 - `[ ]` Add end-to-end resync/backfill command for direct-to-backend scraper mode
 - `[ ]` Replace `external_id=md5(url)` with a stable source product id when the page exposes one
 - `[ ]` Add fallback strategy when stable source id is unavailable
+- `[ ]` Suppress noisy merchandising/navigation labels like `new collection`, `shop`, `עמוד הבית`, and `חנות` before canonical category matching
+- `[ ]` Add regression tests for 200/207 ingest responses, selective hash updates, removed/relisted products, and stable ID extraction
+- `[ ]` Add a one-off production reconciliation/backfill script for legacy md5-era products and stale historical catalog rows
 
 ### 1. Complete Phase A Learning Loop
 
@@ -107,15 +110,15 @@
 
 ### 3. Complete Phase B Feed Modes
 
-- `[ ]` Add explicit feed mode enum/contract in backend
-- `[ ]` Add `feed_mode` to `FeedResponse`
-- `[ ]` Implement `trending` feed path for users without a vector
-- `[ ]` Implement `hybrid` feed path for weak profiles
-- `[ ]` Keep current vector-based path as `personalized`
-- `[ ]` Store mode thresholds in config instead of hardcoding
-- `[ ]` Apply category filtering consistently in all 3 modes
-- `[ ]` Add low-rate discovery injection rule to personalized mode
-- `[ ]` Return mode to frontend so UI can react
+- `[-]` Add explicit feed mode enum/contract in backend
+- `[-]` Add `feed_mode` to `FeedResponse`
+- `[-]` Implement `trending` feed path for users without a vector
+- `[-]` Implement `hybrid` feed path for weak profiles
+- `[-]` Keep current vector-based path as `personalized`
+- `[-]` Store mode thresholds in config instead of hardcoding
+- `[-]` Apply category filtering consistently in all 3 modes
+- `[-]` Add low-rate discovery injection rule to personalized mode
+- `[-]` Return mode to frontend so UI can react
 
 ### 4. Complete Phase B Zero-Friction Start
 
@@ -326,5 +329,5 @@ Do not call the brain "done" until all of these are true:
 
 - Finish scraper/catalog hardening before trusting category quality in production
 - Finish environment work first: migrations + reingest
-- Next highest-value build slice: feed modes plus first real vector-update pipeline
+- Finish and deploy feed modes, then build the first real vector-update pipeline
 - Do not start multi-interest implementation before the basic learning loop is stable
