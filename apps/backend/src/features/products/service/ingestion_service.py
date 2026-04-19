@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from ..schemas.schemas import ProductCreate
     from .product_repository import ProductRepository
 
+from ..utils.category import normalize_raw_categories
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,6 +81,16 @@ class IngestionService:
         self.qdrant = qdrant_client
         self.collection_name = collection_name
 
+    def _canonicalize_product_data(self, product_data: ProductCreate) -> ProductCreate:
+        """Normalize raw categories and derive the canonical category server-side."""
+        if not product_data.raw_categories:
+            return product_data
+
+        category, raw_categories = normalize_raw_categories(product_data.raw_categories)
+        return product_data.model_copy(
+            update={"category": category, "raw_categories": raw_categories}
+        )
+
     async def ingest_product(self, product_data: ProductCreate) -> IngestionResult:
         """Run the full ingestion pipeline for a single product.
 
@@ -96,6 +108,8 @@ class IngestionService:
         Returns:
             IngestionResult with success status and product ID or error details.
         """
+        product_data = self._canonicalize_product_data(product_data)
+
         # 1. Check for duplicate
         if await self.repository.exists(
             product_data.external_id, product_data.store_id
@@ -163,6 +177,7 @@ class IngestionService:
         Returns:
             IngestionResult with success status, product ID, and updated flag.
         """
+        product_data = self._canonicalize_product_data(product_data)
         existing = await self.repository.get_by_external_id(
             product_data.external_id, product_data.store_id
         )

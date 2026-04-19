@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from enum import Enum
+from urllib.parse import unquote_plus
 
 
 class ProductCategory(str, Enum):
@@ -37,11 +38,31 @@ _CATEGORY_KEYWORDS: list[tuple[ProductCategory, set[str]]] = [
             "mules",
             "clogs",
             "slippers",
+            "נעל",
+            "נעלים",
+            "נעליים",
+            "סניקרס",
+            "סניקר",
+            "מגף",
+            "מגפיים",
+            "סנדל",
+            "סנדלים",
+            "כפכף",
+            "כפכפים",
+            "עקב",
+            "עקבים",
         },
     ),
     (
         ProductCategory.DRESSES,
-        {"dress", "dresses", "gown", "gowns", "maxi", "midi", "mini"},
+        {
+            "dress",
+            "dresses",
+            "gown",
+            "gowns",
+            "שמלה",
+            "שמלות",
+        },
     ),
     (
         ProductCategory.JACKETS,
@@ -55,6 +76,16 @@ _CATEGORY_KEYWORDS: list[tuple[ProductCategory, set[str]]] = [
             "blazers",
             "cardigan",
             "cardigans",
+            "זקט",
+            "ז'קט",
+            "בלייזר",
+            "בלייזרים",
+            "מעיל",
+            "מעילים",
+            "עליונית",
+            "עליוניות",
+            "קרדיגן",
+            "קרדיגנים",
         },
     ),
     (
@@ -74,6 +105,12 @@ _CATEGORY_KEYWORDS: list[tuple[ProductCategory, set[str]]] = [
             "wallets",
             "crossbody",
             "satchel",
+            "תיק",
+            "תיקים",
+            "ארנק",
+            "ארנקים",
+            "קלאץ",
+            "קלאץ'",
         },
     ),
     (
@@ -98,6 +135,26 @@ _CATEGORY_KEYWORDS: list[tuple[ProductCategory, set[str]]] = [
             "scarf",
             "scarves",
             "sunglasses",
+            "אקססוריז",
+            "אביזרים",
+            "אביזר",
+            "תכשיט",
+            "תכשיטים",
+            "שרשרת",
+            "שרשראות",
+            "עגיל",
+            "עגילים",
+            "צמיד",
+            "צמידים",
+            "כובע",
+            "כובעים",
+            "חגורה",
+            "חגורות",
+            "צעיף",
+            "צעיפים",
+            "מטפחת",
+            "מטפחות",
+            "משקפיים",
         },
     ),
     (
@@ -112,6 +169,17 @@ _CATEGORY_KEYWORDS: list[tuple[ProductCategory, set[str]]] = [
             "skirts",
             "leggings",
             "joggers",
+            "מכנס",
+            "מכנסיים",
+            "גינס",
+            "ג'ינס",
+            "ג׳ינס",
+            "חצאית",
+            "חצאיות",
+            "טייץ",
+            "טייצים",
+            "שורט",
+            "שורטים",
         },
     ),
     (
@@ -134,9 +202,82 @@ _CATEGORY_KEYWORDS: list[tuple[ProductCategory, set[str]]] = [
             "knitwear",
             "tank",
             "tanks",
+            "חולצה",
+            "חולצות",
+            "טופ",
+            "טופים",
+            "סריג",
+            "סריגים",
+            "סוודר",
+            "סוודרים",
+            "קפוצון",
+            "קפוצ'ון",
+            "קפוצ׳ון",
+            "קפוצונים",
         },
     ),
 ]
+
+_IGNORED_CATEGORY_VALUES = {
+    "all",
+    "general",
+    "gift ideas",
+    "mini me",
+    "mini-me",
+    "new",
+    "new in",
+    "new-in",
+    "sale",
+    "sales",
+    "uncategorized",
+    "כללי",
+}
+
+
+def _normalize_category_value(value: str) -> str:
+    decoded = unquote_plus(str(value)).strip().lower()
+    return re.sub(r"\s+", " ", decoded)
+
+
+def _append_normalized_category(
+    raw_categories: list[str], seen: set[str], value: str | None
+) -> None:
+    if not value:
+        return
+
+    normalized = _normalize_category_value(value)
+    if not normalized or normalized in seen:
+        return
+
+    raw_categories.append(normalized)
+    seen.add(normalized)
+
+
+def normalize_raw_categories(
+    categories: list[str] | None,
+) -> tuple[ProductCategory, list[str]]:
+    """Map raw category strings to the canonical category set."""
+    if not categories:
+        return ProductCategory.OTHER, []
+
+    raw_categories: list[str] = []
+    seen: set[str] = set()
+    tokens: set[str] = set()
+
+    for category in categories:
+        _append_normalized_category(raw_categories, seen, category)
+
+    for raw_category in raw_categories:
+        if raw_category in _IGNORED_CATEGORY_VALUES:
+            continue
+
+        tokens.update(token for token in _TOKEN_SPLIT_RE.split(raw_category) if token)
+
+    for canonical_category, keywords in _CATEGORY_KEYWORDS:
+        if tokens & keywords:
+            return canonical_category, raw_categories
+
+    return ProductCategory.OTHER, raw_categories
 
 
 def normalize_woocommerce_categories(
@@ -147,25 +288,9 @@ def normalize_woocommerce_categories(
         return ProductCategory.OTHER, []
 
     raw_categories: list[str] = []
-    tokens: set[str] = set()
-
+    seen: set[str] = set()
     for category in categories:
         for key in ("name", "slug"):
-            value = category.get(key)
-            if not value:
-                continue
+            _append_normalized_category(raw_categories, seen, category.get(key))
 
-            normalized = str(value).strip().lower()
-            if not normalized:
-                continue
-
-            if normalized not in raw_categories:
-                raw_categories.append(normalized)
-
-            tokens.update(token for token in _TOKEN_SPLIT_RE.split(normalized) if token)
-
-    for canonical_category, keywords in _CATEGORY_KEYWORDS:
-        if tokens & keywords:
-            return canonical_category, raw_categories
-
-    return ProductCategory.OTHER, raw_categories
+    return normalize_raw_categories(raw_categories)

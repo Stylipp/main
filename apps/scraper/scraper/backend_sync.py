@@ -32,6 +32,7 @@ class BackendSync:
             "currency": product.currency,
             "image_url": product.image_urls[0] if product.image_urls else "",
             "product_url": product.url,
+            "raw_categories": product.categories,
         }
 
     async def push_products(self, products: list[ScrapedProduct]) -> int:
@@ -47,7 +48,7 @@ class BackendSync:
         created = 0
         # Send in batches of 50
         for i in range(0, len(valid), 50):
-            chunk = valid[i:i + 50]
+            chunk = valid[i : i + 50]
             payload = {"products": [self._to_payload(p) for p in chunk]}
             try:
                 async with httpx.AsyncClient(timeout=120) as client:
@@ -61,7 +62,11 @@ class BackendSync:
                     failed = data.get("failed", 0)
                     if failed:
                         for err in data.get("errors", [])[:5]:
-                            logger.warning("Ingest failed: %s — %s", err.get("external_id"), err.get("error"))
+                            logger.warning(
+                                "Ingest failed: %s — %s",
+                                err.get("external_id"),
+                                err.get("error"),
+                            )
             except Exception as e:
                 logger.error("Backend batch push failed: %s", e)
 
@@ -79,7 +84,7 @@ class BackendSync:
 
         updated = 0
         for i in range(0, len(valid), 50):
-            chunk = valid[i:i + 50]
+            chunk = valid[i : i + 50]
             payload = {"products": [self._to_payload(p) for p in chunk]}
             try:
                 async with httpx.AsyncClient(timeout=120) as client:

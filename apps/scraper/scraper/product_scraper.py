@@ -26,14 +26,22 @@ _HEADERS = {
 }
 
 
-async def _fetch_with_retry(url: str, store: StoreConfig, max_retries: int = 3) -> httpx.Response:
+async def _fetch_with_retry(
+    url: str, store: StoreConfig, max_retries: int = 3
+) -> httpx.Response:
     """Fetch URL with exponential backoff on 429 responses."""
     for attempt in range(max_retries + 1):
         async with httpx.AsyncClient(timeout=store.timeout_seconds) as client:
             r = await client.get(url, headers=_HEADERS, follow_redirects=True)
             if r.status_code == 429 and attempt < max_retries:
                 wait = 2 ** (attempt + 1)  # 2s, 4s, 8s
-                logger.info("429 rate limited on %s — waiting %ds (retry %d/%d)", url, wait, attempt + 1, max_retries)
+                logger.info(
+                    "429 rate limited on %s — waiting %ds (retry %d/%d)",
+                    url,
+                    wait,
+                    attempt + 1,
+                    max_retries,
+                )
                 await asyncio.sleep(wait)
                 continue
             r.raise_for_status()
@@ -48,7 +56,9 @@ async def scrape_product(url: str, store: StoreConfig) -> ScrapedProduct | None:
 
         soup = BeautifulSoup(r.text, "html.parser")
 
-        data = _extract_jsonld(soup) or _extract_html(soup, store)
+        jsonld_data = _extract_jsonld(soup)
+        html_data = _extract_html(soup, store)
+        data = _merge_product_data(jsonld_data, html_data)
         if not data or not data.get("title"):
             return None
 
@@ -78,7 +88,9 @@ async def scrape_batch(urls: list[str], store: StoreConfig) -> list[ScrapedProdu
         if product:
             results.append(product)
         if i % 50 == 0 or i == len(urls):
-            logger.info("%d/%d scraped for %s (%d ok)", i, len(urls), store.name, len(results))
+            logger.info(
+                "%d/%d scraped for %s (%d ok)", i, len(urls), store.name, len(results)
+            )
         if i < len(urls):
             await asyncio.sleep(store.rate_limit_seconds)
     return results
@@ -116,6 +128,48 @@ def _extract_jsonld(soup: BeautifulSoup) -> dict[str, Any] | None:
                 "categories": [],
             }
     return None
+
+
+def _merge_product_data(
+    primary: dict[str, Any] | None,
+    secondary: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Prefer structured data, but keep taxonomy and missing fields from HTML."""
+    if primary is None:
+        return secondary
+    if secondary is None:
+        return primary
+
+    return {
+        "title": primary.get("title") or secondary.get("title"),
+        "description": primary.get("description") or secondary.get("description"),
+        "price": (
+            primary.get("price")
+            if primary.get("price") is not None
+            else secondary.get("price")
+        ),
+        "sale_price": (
+            primary.get("sale_price")
+            if primary.get("sale_price") is not None
+            else secondary.get("sale_price")
+        ),
+        "image_urls": list(
+            dict.fromkeys(
+                [
+                    *(primary.get("image_urls") or []),
+                    *(secondary.get("image_urls") or []),
+                ]
+            )
+        ),
+        "categories": list(
+            dict.fromkeys(
+                [
+                    *(primary.get("categories") or []),
+                    *(secondary.get("categories") or []),
+                ]
+            )
+        ),
+    }
 
 
 def _find_product_node(data: Any) -> dict | None:
@@ -160,7 +214,11 @@ def _extract_price(node: dict) -> tuple[Decimal | None, Decimal | None]:
     offers = node.get("offers")
     if not offers:
         return None, None
-    offer = offers if isinstance(offers, dict) else (offers[0] if isinstance(offers, list) and offers else None)
+    offer = (
+        offers
+        if isinstance(offers, dict)
+        else (offers[0] if isinstance(offers, list) and offers else None)
+    )
     if not offer or not isinstance(offer, dict):
         return None, None
     return _parse_price(offer.get("price")), None
@@ -191,7 +249,9 @@ def _extract_html(soup: BeautifulSoup, store: StoreConfig) -> dict[str, Any]:
     desc = _text(desc_el)[:1000] if desc_el else None
 
     skip = {"home", "בית", "דף הבית"}
-    cats = [_text(a) for a in soup.select(sel["categories"]) if _text(a).lower() not in skip]
+    cats = [
+        _text(a) for a in soup.select(sel["categories"]) if _text(a).lower() not in skip
+    ]
 
     images = []
     for img in soup.select(sel["images"]):
