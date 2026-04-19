@@ -32,6 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 14: Polish & Quality Assurance** - Explainability templates, UX refinements, load testing, edge cases
 - [ ] **Phase 15: Launch Readiness** - Monitoring dashboards, alerts, launch checklist, soft launch prep
 - [x] **Phase 16: Automated Product Scraping & Sync** - Nightly multi-site scraper, SQLite change detection, WooCommerce + DB + Qdrant sync, async parallel per-site execution
+- [ ] **Phase 17: Scraper-to-Backend Hardening** - Per-product sync contract, selective hash updates, failure retry, product archival, stable source IDs, Hebrew category normalization
 
 ## Phase Details
 
@@ -256,10 +257,32 @@ Plans:
 - [x] 16-05: Qdrant vector sync with batch embedding and re-clustering trigger
 - [x] 16-06: Scraper orchestrator and CLI entry point (run_scraper.py)
 
+### Phase 17: Scraper-to-Backend Hardening
+**Goal:** Fix the scraper sync pipeline so that (1) the backend returns per-product success/failure IDs instead of aggregate counts, (2) the scraper only marks successfully-accepted products as synced, (3) failed products are retried on the next run, (4) products removed from source sitemaps are archived and excluded from feed/Qdrant, (5) products use stable source IDs instead of md5(url) when available, and (6) Hebrew/store-specific category labels normalize correctly instead of falling into "other"
+
+**Depends on:** Phase 16
+
+**Research**: Unlikely (patterns already identified in THE_BRAIN.md and brain-TASKS.md)
+
+**Plans**: 1/TBD plans complete
+
+Plans:
+- [x] 17-01: Per-product sync contract (RejectedItem schema, accepted_ids/rejected, HTTP 207)
+
+**Details:**
+Addresses all open items from brain-TASKS.md section 0A (Scraper-to-Backend Hardening):
+- Sync result contract: backend batch ingest returns `{accepted_ids: [...], rejected: [{id, reason}]}` instead of counts
+- Selective hash update: scraper updates local SQLite hashes only for accepted product IDs
+- Retry on failure: products rejected by backend retain their old hash (or no hash), ensuring the next scraper run re-sends them
+- Product archival: backend soft-delete/archive flow for products no longer in source sitemaps; archived products excluded from feed retrieval and Qdrant search
+- Stable source IDs: extract WooCommerce/store product ID from page when available, fall back to md5(url) only when no stable ID exists
+- Category normalization: expand mapping to handle Hebrew labels, store-specific names, and junk values like "uncategorized"
+- End-to-end resync/backfill command for direct-to-backend scraper mode
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -279,3 +302,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 14. Polish & Quality Assurance | 0/TBD | Not started | - |
 | 15. Launch Readiness | 0/TBD | Not started | - |
 | 16. Automated Product Scraping & Sync | 6/6 | Complete | 2026-03-18 |
+| 17. Scraper-to-Backend Hardening | 1/TBD | In progress | - |

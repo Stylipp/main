@@ -6,21 +6,21 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 6 in progress — Swipe Interface & Feedback (4/TBD plans complete)
+**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (1/TBD plans complete)
 
 ## Current Position
 
-Phase: 6 of 16 (Swipe Interface & Feedback)
-Plan: 4 in current phase
-Status: Plan complete
-Last activity: 2026-03-23 — Completed 06-04-PLAN.md (SwipeCardStack + useFeedbackSubmit)
+Phase: 17 of 17 (Scraper-to-Backend Hardening)
+Plan: 1 in current phase
+Status: In progress
+Last activity: 2026-04-19 — Completed 17-01-PLAN.md (per-product sync contract)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ (Phases 7-15 pending)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (1/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35
+- Total plans completed: 36
 - Average duration: ~9 min
 - Total execution time: ~5h 8m
 
@@ -35,9 +35,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
 | 6 | 4/TBD | ~24m | ~6m |
+| 17 | 1/TBD | ~3m | ~3m |
 
 **Recent Trend:**
-- Last 5 plans: 06-01, 06-02, 06-03, 06-04
+- Last 5 plans: 06-02, 06-03, 06-04, 17-01
 - Trend: Steady
 
 ## Accumulated Context
@@ -110,6 +111,8 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 06-04 | Exit animation on outer motion.div wrapper in SwipeCardStack | AnimatePresence controls lifecycle at deck level, not per-card |
 | 06-04 | useSwipeStore.getState() for imperative reads in callbacks | Avoids stale closures in retryPending and undoLastSwipe |
 | 06-04 | Opposite action submitted on undo for corrective learning | Backend latest record wins; like->dislike correction updates model |
+| 17-01 | Transient exceptions retryable=True, validation failures retryable=False | Scraper can distinguish permanent vs transient failures for retry logic |
+| 17-01 | HTTP 207 only when both accepted and rejected items exist | Pure success stays 200; scraper checks arrays not just status code |
 
 ### Deferred Issues
 
@@ -122,6 +125,7 @@ None yet.
 ### Roadmap Evolution
 
 - Phase 16 added (2026-03-18): Automated Product Scraping & Sync — nightly multi-site scraper replacing manual `apps/The Sprapper/` workflow
+- Phase 17 added (2026-04-16): Scraper-to-Backend Hardening — per-product sync contract, selective hash updates, failure retry, product archival, stable source IDs, Hebrew category normalization
 
 ### Blockers/Concerns
 
@@ -131,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23
-Stopped at: Completed 06-04 (SwipeCardStack + useFeedbackSubmit — deck manager and optimistic feedback hook)
+Last session: 2026-04-19
+Stopped at: Completed 17-01 (per-product sync contract — RejectedItem schema, accepted_ids/rejected arrays, HTTP 207)
 Resume file: None
