@@ -6,23 +6,23 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (2/TBD plans complete)
+**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (3/TBD plans complete)
 
 ## Current Position
 
 Phase: 17 of 17 (Scraper-to-Backend Hardening)
-Plan: 2 in current phase
+Plan: 3 in current phase
 Status: In progress
-Last activity: 2026-04-19 — Completed 17-02-PLAN.md (product archival soft-delete)
+Last activity: 2026-04-19 — Completed 17-03-PLAN.md (feed archival filter & un-archive)
 
 Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (2/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 37
-- Average duration: ~9 min
-- Total execution time: ~5h 8m
+- Total plans completed: 38
+- Average duration: ~8 min
+- Total execution time: ~5h 10m
 
 **By Phase:**
 
@@ -35,10 +35,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
 | 6 | 4/TBD | ~24m | ~6m |
-| 17 | 2/TBD | ~6m | ~3m |
+| 17 | 3/TBD | ~8m | ~3m |
 
 **Recent Trend:**
-- Last 5 plans: 06-03, 06-04, 17-01, 17-02
+- Last 5 plans: 06-03, 06-04, 17-01, 17-02, 17-03
 - Trend: Steady
 
 ## Accumulated Context
@@ -115,6 +115,9 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 17-01 | HTTP 207 only when both accepted and rejected items exist | Pure success stays 200; scraper checks arrays not just status code |
 | 17-02 | Soft-delete via nullable archived_at timestamp + Qdrant payload flag | Preserves interaction history; no hard-delete of products or Qdrant points |
 | 17-02 | archive_products takes session parameter | Caller controls commit timing; consistent with ingest_batch pattern |
+| 17-03 | Archived filter as first must_not in _build_candidate_filter | Always applied regardless of other filter settings; archived products never in feed |
+| 17-03 | Idempotent payload index creation at app startup | ensure_products_payload_indexes() safe to call every startup; Qdrant ignores existing indexes |
+| 17-03 | Un-archive before _update_existing in ingestion | Clears archived_at + Qdrant flag, then refreshes metadata in same flow |
 
 ### Deferred Issues
 
@@ -138,5 +141,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-19
-Stopped at: Completed 17-02 (product archival — archived_at column, Qdrant payload flag, POST /archive/batch)
+Stopped at: Completed 17-03 (feed archival filter & un-archive — Qdrant must_not filter, payload index, un-archive returning products)
 Resume file: None
