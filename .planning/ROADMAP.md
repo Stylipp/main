@@ -264,10 +264,11 @@ Plans:
 
 **Research**: Unlikely (patterns already identified in THE_BRAIN.md and brain-TASKS.md)
 
-**Plans**: 1/TBD plans complete
+**Plans**: 2/TBD plans complete
 
 Plans:
 - [x] 17-01: Per-product sync contract (RejectedItem schema, accepted_ids/rejected, HTTP 207)
+- [x] 17-02: Product archival (archived_at soft-delete, Qdrant payload flag, POST /archive/batch)
 
 **Details:**
 Addresses all open items from brain-TASKS.md section 0A (Scraper-to-Backend Hardening):
@@ -302,4 +303,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 14. Polish & Quality Assurance | 0/TBD | Not started | - |
 | 15. Launch Readiness | 0/TBD | Not started | - |
 | 16. Automated Product Scraping & Sync | 6/6 | Complete | 2026-03-18 |
-| 17. Scraper-to-Backend Hardening | 1/TBD | In progress | - |
+| 17. Scraper-to-Backend Hardening | 2/TBD | In progress | - |

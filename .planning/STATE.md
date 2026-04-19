@@ -6,21 +6,21 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (1/TBD plans complete)
+**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (2/TBD plans complete)
 
 ## Current Position
 
 Phase: 17 of 17 (Scraper-to-Backend Hardening)
-Plan: 1 in current phase
+Plan: 2 in current phase
 Status: In progress
-Last activity: 2026-04-19 — Completed 17-01-PLAN.md (per-product sync contract)
+Last activity: 2026-04-19 — Completed 17-02-PLAN.md (product archival soft-delete)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (1/TBD)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (2/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36
+- Total plans completed: 37
 - Average duration: ~9 min
 - Total execution time: ~5h 8m
 
@@ -35,10 +35,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
 | 6 | 4/TBD | ~24m | ~6m |
-| 17 | 1/TBD | ~3m | ~3m |
+| 17 | 2/TBD | ~6m | ~3m |
 
 **Recent Trend:**
-- Last 5 plans: 06-02, 06-03, 06-04, 17-01
+- Last 5 plans: 06-03, 06-04, 17-01, 17-02
 - Trend: Steady
 
 ## Accumulated Context
@@ -113,6 +113,8 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 06-04 | Opposite action submitted on undo for corrective learning | Backend latest record wins; like->dislike correction updates model |
 | 17-01 | Transient exceptions retryable=True, validation failures retryable=False | Scraper can distinguish permanent vs transient failures for retry logic |
 | 17-01 | HTTP 207 only when both accepted and rejected items exist | Pure success stays 200; scraper checks arrays not just status code |
+| 17-02 | Soft-delete via nullable archived_at timestamp + Qdrant payload flag | Preserves interaction history; no hard-delete of products or Qdrant points |
+| 17-02 | archive_products takes session parameter | Caller controls commit timing; consistent with ingest_batch pattern |
 
 ### Deferred Issues
 
@@ -136,5 +138,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-19
-Stopped at: Completed 17-01 (per-product sync contract — RejectedItem schema, accepted_ids/rejected arrays, HTTP 207)
+Stopped at: Completed 17-02 (product archival — archived_at column, Qdrant payload flag, POST /archive/batch)
 Resume file: None
