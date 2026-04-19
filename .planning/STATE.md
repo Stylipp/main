@@ -6,16 +6,16 @@ See: [.planning/PROJECT.md](.planning/PROJECT.md) (updated 2026-01-27)
 
 **Core value:** Users get relevant fashion recommendations immediately—no lengthy questionnaires, no 50-swipe training period, no guessing what to search for.
 
-**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (3/TBD plans complete)
+**Current focus:** Phase 17 in progress — Scraper-to-Backend Hardening (4/TBD plans complete)
 
 ## Current Position
 
 Phase: 17 of 17 (Scraper-to-Backend Hardening)
-Plan: 3 in current phase
+Plan: 4 in current phase
 Status: In progress
-Last activity: 2026-04-19 — Completed 17-03-PLAN.md (feed archival filter & un-archive)
+Last activity: 2026-04-19 — Completed 17-04-PLAN.md (selective hash updates & soft-delete)
 
-Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (2/TBD)
+Progress: ███████████████ Phase 1-5 ✓ | Phase 6 (4/TBD) | Phase 16 ✓ | Phase 17 (4/TBD)
 
 ## Performance Metrics
 
@@ -35,10 +35,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 5 | 3/3 ✓ | 32m | ~11m |
 | 16 | 6/6 ✓ | ~56m | ~9m |
 | 6 | 4/TBD | ~24m | ~6m |
-| 17 | 3/TBD | ~8m | ~3m |
+| 17 | 4/TBD | ~10m | ~3m |
 
 **Recent Trend:**
-- Last 5 plans: 06-03, 06-04, 17-01, 17-02, 17-03
+- Last 5 plans: 06-04, 17-01, 17-02, 17-03, 17-04
 - Trend: Steady
 
 ## Accumulated Context
@@ -118,6 +118,10 @@ Progress: ███████████████ Phase 1-5 ✓ | Phase 6 
 | 17-03 | Archived filter as first must_not in _build_candidate_filter | Always applied regardless of other filter settings; archived products never in feed |
 | 17-03 | Idempotent payload index creation at app startup | ensure_products_payload_indexes() safe to call every startup; Qdrant ignores existing indexes |
 | 17-03 | Un-archive before _update_existing in ingestion | Clears archived_at + Qdrant flag, then refreshes metadata in same flow |
+| 17-04 | SyncResult dataclass for push/update return type | Consistent with existing ScrapedProduct/ChangeReport pattern in schemas.py |
+| 17-04 | Soft-delete via removed_at TEXT column with ALTER TABLE migration | Backward compatible; existing DBs get column added on initialize() |
+| 17-04 | Returning products treated as changed (not new) | Triggers update flow in backend; clears removed_at in SQLite |
+| 17-04 | Selective hash update via accepted_ids set | O(1) lookups; failed products keep old hash and are retried next run |
 
 ### Deferred Issues
 
@@ -141,5 +145,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-19
-Stopped at: Completed 17-03 (feed archival filter & un-archive — Qdrant must_not filter, payload index, un-archive returning products)
+Stopped at: Completed 17-04 (selective hash updates & soft-delete — SyncResult accepted_ids, soft-delete mark_removed, archive notification)
 Resume file: None
