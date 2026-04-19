@@ -13,6 +13,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +21,12 @@ from ....core.database import get_db
 from ....core.qdrant import get_qdrant_client
 from ....models.product import Product
 from ...ai.service.quality_gate import QualityGateService
-from ..schemas.schemas import BatchIngestRequest, BatchIngestResponse, ProductCreate
+from ..schemas.schemas import (
+    BatchIngestRequest,
+    BatchIngestResponse,
+    ProductCreate,
+    RejectedItem,
+)
 from ..service.ingestion_service import IngestionService
 from ..service.product_repository import ProductRepository
 
@@ -150,13 +156,12 @@ async def ingest_batch(
     Returns:
         BatchIngestResponse with counts and per-product error details.
     """
-    stats: dict = {
-        "total": len(request_body.products),
-        "created": 0,
-        "updated": 0,
-        "failed": 0,
-        "errors": [],
-    }
+    total = len(request_body.products)
+    created = 0
+    updated = 0
+    failed = 0
+    accepted_ids: list[str] = []
+    rejected: list[RejectedItem] = []
 
     for product in request_body.products:
         try:
@@ -168,30 +173,49 @@ async def ingest_batch(
                 product.external_id,
                 e,
             )
-            stats["failed"] += 1
-            stats["errors"].append(
-                {
-                    "external_id": product.external_id,
-                    "store_id": product.store_id,
-                    "error": f"Unexpected error: {e!s}",
-                }
+            failed += 1
+            rejected.append(
+                RejectedItem(
+                    external_id=product.external_id,
+                    store_id=product.store_id,
+                    error=f"Unexpected error: {e!s}",
+                    retryable=True,
+                )
             )
             continue
 
         if result.success:
+            accepted_ids.append(product.external_id)
             if result.updated:
-                stats["updated"] += 1
+                updated += 1
             else:
-                stats["created"] += 1
+                created += 1
         else:
-            stats["failed"] += 1
-            stats["errors"].append(
-                {
-                    "external_id": product.external_id,
-                    "store_id": product.store_id,
-                    "error": result.error,
-                }
+            failed += 1
+            rejected.append(
+                RejectedItem(
+                    external_id=product.external_id,
+                    store_id=product.store_id,
+                    error=result.error or "Unknown error",
+                    retryable=False,
+                )
             )
 
     await session.commit()
-    return BatchIngestResponse(**stats)
+
+    response = BatchIngestResponse(
+        total=total,
+        created=created,
+        updated=updated,
+        failed=failed,
+        accepted_ids=accepted_ids,
+        rejected=rejected,
+    )
+
+    if accepted_ids and rejected:
+        return JSONResponse(
+            status_code=207,
+            content=response.model_dump(mode="json"),
+        )
+
+    return response
