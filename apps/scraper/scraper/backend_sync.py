@@ -7,7 +7,7 @@ import os
 
 import httpx
 
-from .schemas import ScrapedProduct
+from .schemas import ScrapedProduct, SyncResult
 
 logger = logging.getLogger(__name__)
 
@@ -35,17 +35,17 @@ class BackendSync:
             "raw_categories": product.categories,
         }
 
-    async def push_products(self, products: list[ScrapedProduct]) -> int:
-        """Push new products to backend. Returns count created."""
+    async def push_products(self, products: list[ScrapedProduct]) -> SyncResult:
+        """Push new products to backend. Returns SyncResult with accepted_ids."""
+        result = SyncResult()
         if not self.enabled or not products:
-            return 0
+            return result
 
         # Filter out products with no images (backend requires image_url)
         valid = [p for p in products if p.image_urls]
         if not valid:
-            return 0
+            return result
 
-        created = 0
         # Send in batches of 50
         for i in range(0, len(valid), 50):
             chunk = valid[i : i + 50]
@@ -58,9 +58,10 @@ class BackendSync:
                     )
                     r.raise_for_status()
                     data = r.json()
-                    created += data.get("created", 0)
-                    failed = data.get("failed", 0)
-                    if failed:
+                    result.created += data.get("created", 0)
+                    result.failed += data.get("failed", 0)
+                    result.accepted_ids.extend(data.get("accepted_ids", []))
+                    if result.failed:
                         for err in data.get("errors", [])[:5]:
                             logger.warning(
                                 "Ingest failed: %s — %s",
@@ -70,19 +71,19 @@ class BackendSync:
             except Exception as e:
                 logger.error("Backend batch push failed: %s", e)
 
-        logger.info("%d products pushed to backend", created)
-        return created
+        logger.info("%d products pushed to backend", result.created)
+        return result
 
-    async def update_products(self, products: list[ScrapedProduct]) -> int:
-        """Push changed products to backend (handled as upsert). Returns count updated."""
+    async def update_products(self, products: list[ScrapedProduct]) -> SyncResult:
+        """Push changed products to backend (handled as upsert). Returns SyncResult with accepted_ids."""
+        result = SyncResult()
         if not self.enabled or not products:
-            return 0
+            return result
 
         valid = [p for p in products if p.image_urls]
         if not valid:
-            return 0
+            return result
 
-        updated = 0
         for i in range(0, len(valid), 50):
             chunk = valid[i : i + 50]
             payload = {"products": [self._to_payload(p) for p in chunk]}
@@ -94,9 +95,31 @@ class BackendSync:
                     )
                     r.raise_for_status()
                     data = r.json()
-                    updated += data.get("updated", 0)
+                    result.updated += data.get("updated", 0)
+                    result.failed += data.get("failed", 0)
+                    result.accepted_ids.extend(data.get("accepted_ids", []))
             except Exception as e:
                 logger.error("Backend batch update failed: %s", e)
 
-        logger.info("%d products updated in backend", updated)
-        return updated
+        logger.info("%d products updated in backend", result.updated)
+        return result
+
+    async def archive_products(self, store_id: str, external_ids: list[str]) -> int:
+        """Notify backend to archive removed products. Returns archived count."""
+        if not self.enabled or not external_ids:
+            return 0
+
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                r = await client.post(
+                    f"{self.api_url}/api/products/archive/batch",
+                    json={"store_id": store_id, "external_ids": external_ids},
+                )
+                r.raise_for_status()
+                data = r.json()
+                archived = data.get("archived_count", 0)
+                logger.info("%d products archived in backend for store %s", archived, store_id)
+                return archived
+        except Exception as e:
+            logger.error("Backend archive request failed: %s", e)
+            return 0

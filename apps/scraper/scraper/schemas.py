@@ -23,6 +23,14 @@ class ScrapedProduct:
 
 
 @dataclass
+class SyncResult:
+    created: int = 0
+    updated: int = 0
+    failed: int = 0
+    accepted_ids: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ChangeReport:
     store_id: str
     new: list[ScrapedProduct]
