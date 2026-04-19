@@ -1,7 +1,8 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Index, Numeric, String, Text, text
+from sqlalchemy import DateTime, Index, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,10 +26,14 @@ class Product(Base):
     raw_categories: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb"), nullable=False
     )
+    archived_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
 
     __table_args__ = (
         Index("ix_products_external_id", "external_id"),
         Index("ix_products_store_id", "store_id"),
         Index("ix_products_category", "category"),
         Index("ix_products_created_at", "created_at"),
+        Index("ix_products_archived_at", "archived_at"),
     )
