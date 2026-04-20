@@ -220,23 +220,47 @@ _CATEGORY_KEYWORDS: list[tuple[ProductCategory, set[str]]] = [
 ]
 
 _IGNORED_CATEGORY_VALUES = {
+    # English navigation / merchandising labels
     "all",
     "general",
     "gift ideas",
     "home",
+    "homepage",
     "mini me",
     "mini-me",
     "new",
     "new in",
     "new-in",
+    "new collection",
+    "new arrivals",
     "sale",
     "sales",
+    "shop",
+    "shop all",
+    "store",
+    "women",
+    "men",
+    "boys",
+    "girls",
+    "kids",
     "uncategorized",
+    # Hebrew navigation / merchandising labels
     "כללי",
     "ללא קטגוריה",
     "לא מסווג",
     "בית",
     "דף הבית",
+    "עמוד הבית",
+    "חנות",
+    "חדש",
+    "קולקציה",
+    "קולקציה חדשה",
+    "בנים",
+    "בנות",
+    "נשים",
+    "גברים",
+    "ילדים",
+    "מבצעים",
 }
 
 
