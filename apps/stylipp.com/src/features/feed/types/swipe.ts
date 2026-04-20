@@ -61,3 +61,14 @@ export interface PendingFeedback {
   action: SwipeAction
   retryCount: number
 }
+
+export interface ExposureEvent {
+  product_id: string
+  session_id: string
+  feed_mode: FeedMode
+  position: number
+  shown_at: string
+  action?: SwipeAction
+  action_at?: string
+  dwell_ms?: number
+}

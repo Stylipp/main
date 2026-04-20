@@ -7,7 +7,9 @@ for recording user interactions (like/dislike/save) with products.
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from src.features.feed.schemas.schemas import FeedMode
 
 
 class FeedbackAction(str, Enum):
@@ -44,3 +46,42 @@ class FeedbackResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ExposureEvent(BaseModel):
+    """A single feed exposure or exposure completion event."""
+
+    product_id: str
+    session_id: str = Field(min_length=1, max_length=64)
+    feed_mode: FeedMode
+    position: int = Field(ge=1)
+    shown_at: datetime
+    action: FeedbackAction | None = None
+    action_at: datetime | None = None
+    dwell_ms: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_action_fields(self) -> "ExposureEvent":
+        if self.action is None:
+            if self.action_at is not None or self.dwell_ms is not None:
+                raise ValueError(
+                    "action_at and dwell_ms require an action to be present"
+                )
+            return self
+
+        if self.action_at is None:
+            raise ValueError("action_at is required when action is present")
+        return self
+
+
+class ExposureBatchRequest(BaseModel):
+    """Batch request for recording exposure events."""
+
+    events: list[ExposureEvent] = Field(min_length=1, max_length=100)
+
+
+class ExposureBatchResponse(BaseModel):
+    """Response after recording a batch of exposure events."""
+
+    received: int
+    processed: int

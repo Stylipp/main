@@ -12,32 +12,59 @@ import { SwipeCardStack, type SwipeCardStackRef } from '../components/SwipeCardS
 import { SwipeActions } from '../components/SwipeActions'
 import { FeedEmptyState } from '../components/FeedEmptyState'
 import { useFeed } from '../hooks/useFeed'
+import { useExposureTracking } from '../hooks/useExposureTracking'
 import { useFeedbackSubmit } from '../hooks/useFeedbackSubmit'
 import { useSwipeStore, canUndo as canUndoSelector } from '../stores/swipeStore'
 import { FEED_CATEGORY_OPTIONS, type FeedCategory, formatCategoryLabel } from '../types/swipe'
 
+function createFeedSessionId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+  return `feed-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 export default function FeedPage() {
   const [selectedCategory, setSelectedCategory] = useState<FeedCategory>('all')
+  const [feedSessionId, setFeedSessionId] = useState(createFeedSessionId)
   const { currentCard, remainingCards, isLoading, error, hasMore, feedMode, refetch } =
     useFeed(selectedCategory)
   const { submitFeedback, undoLastSwipe } = useFeedbackSubmit()
   const userCanUndo = useSwipeStore(canUndoSelector)
   const cards = useSwipeStore((s) => s.cards)
+  const currentIndex = useSwipeStore((s) => s.currentIndex)
   const reset = useSwipeStore((s) => s.reset)
 
   const stackRef = useRef<SwipeCardStackRef>(null)
   const [isAnimating, setIsAnimating] = useState(false)
   const [showSaved, setShowSaved] = useState(false)
+  const { markAction } = useExposureTracking({
+    currentCard,
+    currentIndex,
+    feedMode,
+    sessionId: feedSessionId,
+  })
 
   useEffect(() => {
     return () => reset()
   }, [reset])
 
+  const handleRefetch = useCallback(() => {
+    setFeedSessionId(createFeedSessionId())
+    refetch()
+  }, [refetch])
+
+  const handleCategoryChange = useCallback((category: FeedCategory) => {
+    setFeedSessionId(createFeedSessionId())
+    setSelectedCategory(category)
+  }, [])
+
   const handleFeedback = useCallback(
     (productId: string, action: 'like' | 'dislike' | 'save') => {
+      markAction(productId, action)
       submitFeedback(productId, action)
     },
-    [submitFeedback]
+    [markAction, submitFeedback]
   )
 
   const handleLike = useCallback(() => {
@@ -50,10 +77,11 @@ export default function FeedPage() {
 
   const handleSave = useCallback(() => {
     if (currentCard) {
+      markAction(currentCard.product_id, 'save')
       submitFeedback(currentCard.product_id, 'save')
       setShowSaved(true)
     }
-  }, [currentCard, submitFeedback])
+  }, [currentCard, markAction, submitFeedback])
 
   const handleUndo = useCallback(() => {
     if (isAnimating) return
@@ -134,7 +162,7 @@ export default function FeedPage() {
               key={option.value}
               label={option.label}
               clickable
-              onClick={() => setSelectedCategory(option.value)}
+              onClick={() => handleCategoryChange(option.value)}
               color={selectedCategory === option.value ? 'primary' : 'default'}
               variant={selectedCategory === option.value ? 'filled' : 'outlined'}
               sx={{
@@ -205,12 +233,12 @@ export default function FeedPage() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               {error}
             </Typography>
-            <Button variant="outlined" onClick={refetch} sx={{ borderRadius: 12 }}>
+            <Button variant="outlined" onClick={handleRefetch} sx={{ borderRadius: 12 }}>
               Try Again
             </Button>
           </Box>
         ) : noCards ? (
-          <FeedEmptyState onRefresh={refetch} />
+          <FeedEmptyState onRefresh={handleRefetch} />
         ) : (
           <SwipeCardStack ref={stackRef} onFeedback={handleFeedback} />
         )}

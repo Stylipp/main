@@ -39,12 +39,12 @@
 ### Biggest Missing Pieces
 
 - `[ ]` Scraper-to-backend hardening for categories, sync correctness, and removals
-- `[ ]` Real learning loop: swipes update the actual user vector
+- `[-]` Real learning loop: async per-user vector updates are built in code and tested locally, but still need deploy/manual verification
 - `[-]` Feed modes: `trending`, `hybrid`, `personalized` are built in code and tested locally, but still need push/deploy and manual verification
 - `[ ]` Auto cold-start from interactions without photo upload
-- `[ ]` Exposure logging
+- `[-]` Exposure logging foundation is built in code and tested locally, but still needs deploy/manual verification
 - `[ ]` Richer feedback signals
-- `[ ]` Rolling price learning
+- `[-]` Rolling price learning has a first-pass EMA update on positive signals, but still needs deploy/manual verification and tuning
 - `[ ]` Replace `cluster_prior` with popularity
 - `[ ]` Multi-interest vectors
 
@@ -85,26 +85,26 @@
 
 ### 1. Complete Phase A Learning Loop
 
-- `[ ]` Add profile update service dedicated to recommendation-state updates
-- `[ ]` Move vector updates out of request path into a background task boundary
+- `[-]` Add profile update service dedicated to recommendation-state updates
+- `[-]` Move vector updates out of request path into a background task boundary
 - `[ ]` Define update input contract: user id, product id, action, timestamp, profile version
-- `[ ]` Implement ordered profile updates using `profile_version`
-- `[ ]` Implement incremental vector update on `like`
-- `[ ]` Implement incremental vector update on `dislike`
-- `[ ]` Decide and implement behavior for `save`
+- `[-]` Implement ordered profile updates using `profile_version`
+- `[-]` Implement incremental vector update on `like`
+- `[-]` Implement incremental vector update on `dislike`
+- `[-]` Decide and implement behavior for `save`
 - `[ ]` Persist updated vector back to Qdrant `user_profiles`
-- `[ ]` Update `last_profile_update_at` whenever vector changes
-- `[ ]` Update `profile_source` when first learned from post-onboarding behavior
-- `[ ]` Add drift guardrail: cap per-update movement
-- `[ ]` Add burst guardrail: dampen repeated dislikes
+- `[-]` Update `last_profile_update_at` whenever vector changes
+- `[-]` Update `profile_source` when first learned from post-onboarding behavior
+- `[-]` Add drift guardrail: cap per-update movement
+- `[-]` Add burst guardrail: dampen repeated dislikes
 - `[ ]` Add stale-interest decay rule for later compatibility
 - `[ ]` Add periodic full rebuild command/job for profile reconciliation
 
 ### 2. Complete Phase A Price Learning
 
-- `[ ]` Replace onboarding-only price profile with rolling update logic
-- `[ ]` Update price profile on `like`
-- `[ ]` Decide whether `save` should affect price profile
+- `[-]` Replace onboarding-only price profile with rolling update logic
+- `[-]` Update price profile on `like`
+- `[-]` Decide whether `save` should affect price profile
 - `[ ]` Keep safe defaults for users with sparse history
 - `[ ]` Confirm feed ranking still behaves well when price data is weak
 
@@ -131,13 +131,13 @@
 
 ### 5. Complete Exposure Logging
 
-- `[ ]` Add `ExposureLog` model and migration
-- `[ ]` Add backend endpoint for batched exposure events
-- `[ ]` Store `session_id`, `feed_mode`, `position`, `shown_at`, `action`, `action_at`, `dwell_ms`
-- `[ ]` Decide whether exposure writes are sync or buffered
-- `[ ]` Wire feed frontend to emit exposure events when card becomes visible
-- `[ ]` Wire swipe/save actions to complete the exposure row
-- `[ ]` Protect against duplicate exposure events for the same visible card
+- `[-]` Add `ExposureLog` model and migration
+- `[-]` Add backend endpoint for batched exposure events
+- `[-]` Store `session_id`, `feed_mode`, `position`, `shown_at`, `action`, `action_at`, `dwell_ms`
+- `[x]` Decide whether exposure writes are sync or buffered
+- `[-]` Wire feed frontend to emit exposure events when card becomes visible
+- `[-]` Wire swipe/save actions to complete the exposure row
+- `[-]` Protect against duplicate exposure events for the same visible card
 
 ### 6. Complete Richer Feedback Signals
 
@@ -329,5 +329,5 @@ Do not call the brain "done" until all of these are true:
 
 - Finish scraper/catalog hardening before trusting category quality in production
 - Finish environment work first: migrations + reingest
-- Finish and deploy feed modes, then build the first real vector-update pipeline
+- Finish and deploy feed modes and async profile learning, then move to exposure logging and the richer feedback pipeline
 - Do not start multi-interest implementation before the basic learning loop is stable

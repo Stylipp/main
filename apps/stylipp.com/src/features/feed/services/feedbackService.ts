@@ -1,5 +1,5 @@
 import api from '@/shared/hooks/useApi'
-import type { FeedCategory, FeedResponse, SwipeAction } from '../types/swipe'
+import type { ExposureEvent, FeedCategory, FeedResponse, SwipeAction } from '../types/swipe'
 
 export async function fetchFeed(
   cursor?: string,
@@ -15,4 +15,8 @@ export async function fetchFeed(
 
 export async function submitFeedback(productId: string, action: SwipeAction): Promise<void> {
   await api.post('/feedback/', { product_id: productId, action })
+}
+
+export async function submitExposureEvents(events: ExposureEvent[]): Promise<void> {
+  await api.post('/feedback/exposures', { events })
 }

@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     feed_hybrid_confidence_threshold: float = 0.6
     feed_hybrid_personalized_ratio: float = 0.6
     feed_personalized_discovery_count: int = 2
+    profile_update_lr_new: float = 0.15
+    profile_update_lr_mid: float = 0.08
+    profile_update_lr_mature: float = 0.03
+    profile_update_lr_mid_confidence: float = 0.3
+    profile_update_lr_mature_confidence: float = 0.7
+    profile_update_dislike_gamma: float = 0.05
+    profile_update_max_delta: float = 0.15
+    profile_update_price_alpha: float = 0.1
+    profile_update_save_price_alpha: float = 0.15
+    profile_update_dislike_burst_count: int = 10
+    profile_update_dislike_burst_gamma_scale: float = 0.5
 
     # WooCommerce partner store (optional - for future partner integration)
     woo_store_url: str | None = None
